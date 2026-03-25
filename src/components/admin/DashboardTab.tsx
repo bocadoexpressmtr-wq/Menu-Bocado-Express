@@ -139,20 +139,27 @@ export default function DashboardTab({ orders, products, customers, settings }: 
         {/* Sales Chart */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-stone-100">
           <h3 className="text-lg font-bold text-stone-900 mb-6">Tendencia de Ventas</h3>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={salesData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#a8a29e', fontSize: 11, fontWeight: 600}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#a8a29e', fontSize: 11, fontWeight: 600}} tickFormatter={(val) => `$${val/1000}k`} />
-                <Tooltip 
-                   cursor={{fill: '#f5f5f5'}}
-                  formatter={(value: number) => [formatPrice(value), 'Ventas']}
-                  contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', padding: '12px'}}
-                />
-                <Bar dataKey="sales" fill="#1A1A1A" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="h-[300px] w-full flex items-center justify-center">
+            {salesData.some(d => d.sales > 0) ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={salesData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#a8a29e', fontSize: 11, fontWeight: 600}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#a8a29e', fontSize: 11, fontWeight: 600}} tickFormatter={(val) => `$${val/1000}k`} />
+                  <Tooltip 
+                    cursor={{fill: '#f5f5f5'}}
+                    formatter={(value: number) => [formatPrice(value), 'Ventas']}
+                    contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', padding: '12px'}}
+                  />
+                  <Bar dataKey="sales" fill="#1A1A1A" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-stone-300 flex flex-col items-center">
+                <TrendingUp size={48} className="mb-2 opacity-20" />
+                <p className="text-sm font-medium">Sin datos de ventas.</p>
+              </div>
+            )}
           </div>
         </div>
 

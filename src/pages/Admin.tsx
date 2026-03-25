@@ -60,7 +60,8 @@ export default function Admin() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    const isGoogleAdmin = auth.currentUser?.email === 'bocadoexpress.mtr@gmail.com';
+    if (!isAuthenticated || !isGoogleAdmin) return;
 
     const unsubOrders = onSnapshot(query(collection(db, 'orders'), orderBy('createdAt', 'desc')), (snapshot) => {
       const newOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
