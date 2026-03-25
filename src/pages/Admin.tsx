@@ -18,6 +18,13 @@ export default function Admin() {
   const [pinInput, setPinInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'products' | 'categories' | 'reviews' | 'settings' | 'loyalty'>('dashboard');
+  const [user, setUser] = useState(auth.currentUser);
+
+  useEffect(() => {
+    return auth.onAuthStateChanged((u) => {
+      setUser(u);
+    });
+  }, []);
 
   // Data states
   const [orders, setOrders] = useState<Order[]>([]);
@@ -60,19 +67,21 @@ export default function Admin() {
   }, []);
 
   useEffect(() => {
-    const isGoogleAdmin = auth.currentUser?.email === 'bocadoexpress.mtr@gmail.com';
+    const isGoogleAdmin = user?.email === 'bocadoexpress.mtr@gmail.com';
     if (!isAuthenticated || !isGoogleAdmin) return;
 
     const unsubOrders = onSnapshot(query(collection(db, 'orders'), orderBy('createdAt', 'desc')), (snapshot) => {
       const newOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
       
-      // Play sound for new orders if not initial load
-      if (orders.length > 0 && newOrders.length > orders.length) {
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-        audio.play().catch(e => console.log("Audio play failed:", e));
-      }
-      
-      setOrders(newOrders);
+      // Use a ref or a more stable way to check for new orders to avoid dependency loops
+      // For now, we'll just check if it's the first load
+      setOrders(prev => {
+        if (prev.length > 0 && newOrders.length > prev.length) {
+          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+          audio.play().catch(e => console.log("Audio play failed:", e));
+        }
+        return newOrders;
+      });
     }, (err) => console.error(err));
 
     const unsubProducts = onSnapshot(query(collection(db, 'products')), (snapshot) => {
@@ -98,7 +107,7 @@ export default function Admin() {
       unsubReviews();
       unsubCustomers();
     };
-  }, [isAuthenticated, orders.length]);
+  }, [isAuthenticated, user]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -402,7 +411,7 @@ export default function Admin() {
       {/* Main Content */}
       <main className="flex-1 p-4 md:p-8 overflow-y-auto pb-20 md:pb-8">
         <div className="max-w-6xl mx-auto">
-          {!auth.currentUser && (
+          {isAuthenticated && !user && (
             <div className="mb-6 bg-amber-50 border border-amber-200 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3 text-amber-800">
                 <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
