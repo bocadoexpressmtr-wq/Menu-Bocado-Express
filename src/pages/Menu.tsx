@@ -474,37 +474,37 @@ export default function Menu() {
       <header className="bg-[#1A1A1A] text-white p-4 sticky top-0 z-40 shadow-md">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <div className="flex flex-col">
-            <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-wider text-[#FDE047] leading-none">
+            <h1 className="text-3xl font-display font-bold tracking-wider text-[#FDE047] leading-none">
               BOCADO
             </h1>
-            <span className="text-[10px] sm:text-xs font-bold tracking-widest text-white uppercase mt-1">
+            <span className="text-xs font-bold tracking-widest text-white uppercase mt-1">
               Express
             </span>
           </div>
-          <div className="flex gap-1.5 sm:gap-3">
+          <div className="flex gap-3">
             <button 
               onClick={() => setIsReviewsModalOpen(true)}
-              className="p-1.5 sm:p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
               title="Ver Reseñas"
             >
-              <Star size={18} className="fill-[#FDE047] sm:w-5 sm:h-5" />
-              <span className="text-[10px] sm:text-xs font-bold">Reseñas</span>
+              <Star size={20} className="fill-[#FDE047]" />
+              <span className="text-xs font-bold hidden sm:inline">Reseñas</span>
             </button>
             <button 
               onClick={() => setIsLoyaltyModalOpen(true)}
-              className="p-1.5 sm:p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
               title="Club Bocado"
             >
-              <Gift size={18} className="sm:w-5 sm:h-5" />
-              <span className="text-[10px] sm:text-xs font-bold">Club Bocado</span>
+              <Gift size={20} />
+              <span className="text-xs font-bold hidden sm:inline">Club Bocado</span>
             </button>
             <button 
               onClick={handleShare}
-              className="p-1.5 sm:p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
               title="Compartir"
             >
-              <Share2 size={18} className="sm:w-5 sm:h-5" />
-              <span className="text-[10px] sm:text-xs font-bold">Compartir</span>
+              <Share2 size={20} />
+              <span className="text-xs font-bold hidden sm:inline">Compartir</span>
             </button>
           </div>
         </div>
