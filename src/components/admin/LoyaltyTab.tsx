@@ -49,11 +49,11 @@ export default function LoyaltyTab({ customers, settings }: LoyaltyTabProps) {
     e.preventDefault();
     setIsSaving(true);
     try {
-      await updateDoc(doc(db, 'settings', 'store'), {
+      await setDoc(doc(db, 'settings', 'store'), {
         loyaltyPrize,
         loyaltyGoal: Number(loyaltyGoal),
         loyaltyMinOrder: Number(loyaltyMinOrder)
-      });
+      }, { merge: true });
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
