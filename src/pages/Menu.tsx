@@ -315,7 +315,10 @@ export default function Menu() {
       }
 
       const whatsappUrl = `https://wa.me/573144052399?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, '_blank');
+      
+      // Use window.location.href for better compatibility with iOS Safari
+      // Safari often blocks window.open in async contexts
+      window.location.href = whatsappUrl;
 
       // Persist success state
       localStorage.setItem('orderSuccess', 'true');
@@ -385,82 +388,80 @@ export default function Menu() {
 
   if (orderSuccess) {
     return (
-      <div className="min-h-screen bg-[#1A1A1A] text-white flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
-        <PartyPopper size={80} className="text-[#FDE047] mb-6 animate-bounce" />
-        <h1 className="text-4xl font-display font-bold text-[#FDE047] uppercase tracking-wider mb-4">¡Tu Bocado ya se está preparando!</h1>
-        <p className="text-xl text-stone-300 mb-8 max-w-md">
-          {loyaltyOptIn 
-            ? "Al confirmar tu pedido por WhatsApp, sumaremos 1 sello a tu tarjeta. 🎁" 
-            : "Tu pedido ha sido enviado a nuestro WhatsApp."}
-        </p>
-        
-        <div className="bg-white/10 p-6 rounded-2xl border-2 border-[#E3242B] max-w-md w-full mb-8 text-left">
-          <h2 className="text-xl font-bold mb-4 text-[#FDE047] flex items-center gap-2">
-            <Star className="fill-[#FDE047]" size={20} /> ¿Qué tal estuvo tu experiencia?
-          </h2>
-          <form onSubmit={submitReview} className="space-y-4">
-            <div>
-              <label className="block text-sm text-stone-300 mb-2">Califica tu pedido</label>
-              <div className="flex gap-2">
+      <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-500">
+        <div className="bg-[#1A1A1A] text-white w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300">
+          {/* Close Button */}
+          <button 
+            onClick={() => {
+              setOrderSuccess(false);
+              localStorage.removeItem('orderSuccess');
+            }}
+            className="absolute top-6 right-6 w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors z-10"
+          >
+            <X size={20} />
+          </button>
+
+          <div className="p-8 pt-12 flex flex-col items-center text-center">
+            <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 animate-bounce shadow-lg shadow-green-500/20">
+              <CheckCircle2 size={40} className="text-white" />
+            </div>
+            
+            <h1 className="text-3xl font-display font-bold mb-2 uppercase tracking-tight">¡Pedido Enviado!</h1>
+            <p className="text-stone-400 text-sm mb-8 leading-relaxed">
+              Tu pedido ha sido enviado a WhatsApp. <br/>
+              <span className="text-[#FDE047] font-bold">¡No olvides confirmar el mensaje en el chat!</span>
+            </p>
+
+            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl w-full mb-8 backdrop-blur-sm">
+              <h2 className="text-lg font-bold mb-4 text-[#FDE047] uppercase tracking-wider">¿Qué tal estuvo tu experiencia?</h2>
+              <div className="flex justify-center gap-2 mb-6">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
-                    type="button"
                     onClick={() => setReviewRating(star)}
-                    className="focus:outline-none"
+                    className={cn(
+                      "p-1 transition-all active:scale-125",
+                      reviewRating >= star ? "text-[#FDE047] scale-110" : "text-stone-600 hover:text-stone-500"
+                    )}
                   >
-                    <Star 
-                      size={32} 
-                      className={star <= reviewRating ? "text-[#FDE047] fill-[#FDE047]" : "text-stone-500"} 
-                    />
+                    <Star size={36} fill={reviewRating >= star ? "currentColor" : "none"} strokeWidth={1.5} />
                   </button>
                 ))}
               </div>
-            </div>
-            <div>
-              <textarea 
-                placeholder="Cuéntanos qué te pareció..." 
-                required
+              <textarea
+                placeholder="Cuéntanos qué te pareció (opcional)"
                 value={reviewText}
-                onChange={e => setReviewText(e.target.value)}
-                className="w-full p-3 rounded-xl border border-stone-600 focus:outline-none focus:border-[#FDE047] bg-stone-800 text-white min-h-[80px]"
+                onChange={(e) => setReviewText(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:border-[#FDE047] mb-4 min-h-[100px] text-white placeholder:text-stone-600"
               />
+              <button
+                onClick={submitReview}
+                disabled={reviewRating === 0}
+                className="w-full bg-[#FDE047] text-[#1A1A1A] font-black uppercase tracking-widest p-4 rounded-xl transition-all active:scale-95 disabled:opacity-30 disabled:grayscale"
+              >
+                Enviar Reseña
+              </button>
             </div>
-            <button 
-              type="submit"
-              disabled={isSubmittingReview}
-              className="w-full bg-[#E3242B] text-white font-bold py-3 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
-            >
-              {isSubmittingReview ? "Enviando..." : "Enviar Reseña"}
-            </button>
-          </form>
-          
-          <div className="pt-4 border-t border-stone-800">
-            <button 
-              onClick={handleShare}
-              className="w-full bg-white/10 text-[#FDE047] font-bold py-3 rounded-xl hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
-            >
-              <Share2 size={20} /> Recomendar a un amigo
-            </button>
+
+            <div className="grid grid-cols-2 gap-3 w-full">
+              <button
+                onClick={handleShare}
+                className="flex items-center justify-center gap-2 bg-white/5 text-stone-300 font-bold py-4 rounded-xl border border-white/10 hover:bg-white/10 transition-colors text-sm"
+              >
+                <Share2 size={18} /> Compartir
+              </button>
+              <button
+                onClick={() => {
+                  setOrderSuccess(false);
+                  localStorage.removeItem('orderSuccess');
+                }}
+                className="bg-stone-800 text-white font-bold py-4 rounded-xl hover:bg-stone-700 transition-colors text-sm"
+              >
+                Omitir
+              </button>
+            </div>
           </div>
         </div>
-
-        <button 
-          onClick={() => {
-            localStorage.removeItem('orderSuccess');
-            localStorage.removeItem('lastCustomerName');
-            localStorage.removeItem('lastLoyaltyOptIn');
-            setOrderSuccess(false);
-            setCustomerName('');
-            setCustomerPhone('');
-            setCustomerAddress('');
-            setCashAmount('');
-            setLocation(null);
-          }}
-          className="text-stone-400 hover:text-white underline text-sm"
-        >
-          Omitir y volver al menú
-        </button>
       </div>
     );
   }
@@ -916,8 +917,8 @@ export default function Menu() {
                 </div>
               </div>
 
-              {/* Total & Submit Footer (Sticky) */}
-              <div className="p-4 bg-white border-t border-stone-200 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] sticky bottom-0 z-20">
+              {/* Total & Submit Footer (Fixed at bottom of form) */}
+              <div className="p-4 bg-white border-t border-stone-200 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] shrink-0">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-stone-500 font-medium">Subtotal</span>
                   <span className="text-2xl font-bold text-[#1A1A1A]">{formatPrice(cartTotal)}</span>
