@@ -56,6 +56,9 @@ export interface StoreSettings {
   loyaltyMinOrder: number;
   referralEnabled: boolean;
   adminPin?: string;
+  whatsappMessageHeader?: string;
+  whatsappMessageFooter?: string;
+  shareText?: string;
 }
 
 export interface Customer {

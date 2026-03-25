@@ -120,7 +120,7 @@ export default function Menu() {
   const handleShare = async () => {
     const shareData = {
       title: 'Bocado Express - Menú Digital',
-      text: '¡Mira este menú! Los mejores suizos y hamburguesas de la ciudad. 🍔🔥',
+      text: settings.shareText || 'Los mejores cubanos y suizos de la ciudad',
       url: window.location.origin,
     };
 
@@ -279,33 +279,33 @@ export default function Menu() {
       await addDoc(collection(db, 'orders'), orderData);
       
       // Format WhatsApp Message
-      let message = `*NUEVO PEDIDO BOCADO EXPRESS* 🍔\n\n`;
-      message += `*Cliente:* ${customerName}\n`;
-      message += `*Teléfono:* ${customerPhone}\n`;
-      message += `*Tipo de Entrega:* ${deliveryType.toUpperCase()}\n`;
+      let message = `${settings.whatsappMessageHeader || '🥪 *NUEVO PEDIDO - BOCADO EXPRESS*'}\n\n`;
+      message += `👤 *Cliente:* ${customerName}\n`;
+      message += `📱 *Teléfono:* ${customerPhone}\n`;
+      message += `🚚 *Tipo de Entrega:* ${deliveryType.toUpperCase()}\n`;
       
       if (deliveryType === 'domicilio') {
-        message += `*Dirección:* ${customerAddress}\n`;
+        message += `📍 *Dirección:* ${customerAddress}\n`;
         if (location) {
-          message += `*Ubicación GPS:* https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}\n`;
+          message += `🗺️ *Ubicación GPS:* https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}\n`;
         }
       }
       
-      message += `\n*Método de Pago:* ${paymentMethod.toUpperCase()}\n`;
+      message += `\n💳 *Método de Pago:* ${paymentMethod.toUpperCase()}\n`;
       if (paymentMethod === 'efectivo') {
-        message += `*Paga con:* ${formatPrice(parseFloat(cashAmount))}\n`;
-        message += `*Cambio:* ${formatPrice(parseFloat(cashAmount) - cartTotal)}\n`;
+        message += `💵 *Paga con:* ${formatPrice(parseFloat(cashAmount))}\n`;
+        message += `💰 *Cambio:* ${formatPrice(parseFloat(cashAmount) - cartTotal)}\n`;
       }
       
       if (orderNotes) {
-        message += `\n*Notas del pedido:* ${orderNotes}\n`;
+        message += `\n📝 *Notas del pedido:* ${orderNotes}\n`;
       }
 
-      message += `\n*Detalle del pedido:*\n`;
+      message += `\n🛒 *Detalle del pedido:*\n`;
       cart.forEach(item => {
         message += `- ${item.quantity}x ${item.name} (${formatPrice(item.price * item.quantity)})\n`;
       });
-      message += `\n*Total a pagar:* ${formatPrice(cartTotal)}\n`;
+      message += `\n✨ *Total a pagar:* ${formatPrice(cartTotal)}\n`;
       if (deliveryType === 'domicilio') {
         message += `*(El costo del domicilio se confirmará por este medio)*\n`;
       }
@@ -313,6 +313,8 @@ export default function Menu() {
       if (loyaltyOptIn) {
         message += `\n🎁 *Cliente Club Bocado* (Pendiente de sello)\n`;
       }
+
+      message += `\n${settings.whatsappMessageFooter || 'Vengo de Menú Digital Bocado Express'}`;
 
       const whatsappUrl = `https://wa.me/573144052399?text=${encodeURIComponent(message)}`;
       
@@ -389,32 +391,32 @@ export default function Menu() {
   if (orderSuccess) {
     return (
       <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-500">
-        <div className="bg-[#1A1A1A] text-white w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300">
+        <div className="bg-[#1A1A1A] text-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300">
           {/* Close Button */}
           <button 
             onClick={() => {
               setOrderSuccess(false);
               localStorage.removeItem('orderSuccess');
             }}
-            className="absolute top-6 right-6 w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors z-10"
+            className="absolute top-4 right-4 w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors z-10"
           >
-            <X size={20} />
+            <X size={16} />
           </button>
 
-          <div className="p-8 pt-12 flex flex-col items-center text-center">
-            <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 animate-bounce shadow-lg shadow-green-500/20">
-              <CheckCircle2 size={40} className="text-white" />
+          <div className="p-6 pt-10 flex flex-col items-center text-center">
+            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mb-4 animate-bounce shadow-lg shadow-green-500/20">
+              <CheckCircle2 size={32} className="text-white" />
             </div>
             
-            <h1 className="text-3xl font-display font-bold mb-2 uppercase tracking-tight">¡Pedido Enviado!</h1>
-            <p className="text-stone-400 text-sm mb-8 leading-relaxed">
+            <h1 className="text-2xl font-display font-bold mb-1 uppercase tracking-tight">¡Pedido Enviado!</h1>
+            <p className="text-stone-400 text-xs mb-6 leading-relaxed">
               Tu pedido ha sido enviado a WhatsApp. <br/>
               <span className="text-[#FDE047] font-bold">¡No olvides confirmar el mensaje en el chat!</span>
             </p>
 
-            <div className="bg-white/5 border border-white/10 p-6 rounded-3xl w-full mb-8 backdrop-blur-sm">
-              <h2 className="text-lg font-bold mb-4 text-[#FDE047] uppercase tracking-wider">¿Qué tal estuvo tu experiencia?</h2>
-              <div className="flex justify-center gap-2 mb-6">
+            <div className="bg-white/5 border border-white/10 p-5 rounded-3xl w-full mb-6 backdrop-blur-sm">
+              <h2 className="text-base font-bold mb-3 text-[#FDE047] uppercase tracking-wider">¿Qué tal estuvo tu experiencia?</h2>
+              <div className="flex justify-center gap-1.5 mb-4">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
@@ -424,7 +426,7 @@ export default function Menu() {
                       reviewRating >= star ? "text-[#FDE047] scale-110" : "text-stone-600 hover:text-stone-500"
                     )}
                   >
-                    <Star size={36} fill={reviewRating >= star ? "currentColor" : "none"} strokeWidth={1.5} />
+                    <Star size={28} fill={reviewRating >= star ? "currentColor" : "none"} strokeWidth={1.5} />
                   </button>
                 ))}
               </div>
@@ -432,12 +434,12 @@ export default function Menu() {
                 placeholder="Cuéntanos qué te pareció (opcional)"
                 value={reviewText}
                 onChange={(e) => setReviewText(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:border-[#FDE047] mb-4 min-h-[100px] text-white placeholder:text-stone-600"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl p-3 text-xs focus:outline-none focus:border-[#FDE047] mb-3 min-h-[80px] text-white placeholder:text-stone-600"
               />
               <button
                 onClick={submitReview}
                 disabled={reviewRating === 0}
-                className="w-full bg-[#FDE047] text-[#1A1A1A] font-black uppercase tracking-widest p-4 rounded-xl transition-all active:scale-95 disabled:opacity-30 disabled:grayscale"
+                className="w-full bg-[#FDE047] text-[#1A1A1A] font-black uppercase tracking-widest p-3 rounded-xl transition-all active:scale-95 disabled:opacity-30 disabled:grayscale text-sm"
               >
                 Enviar Reseña
               </button>
@@ -446,16 +448,16 @@ export default function Menu() {
             <div className="grid grid-cols-2 gap-3 w-full">
               <button
                 onClick={handleShare}
-                className="flex items-center justify-center gap-2 bg-white/5 text-stone-300 font-bold py-4 rounded-xl border border-white/10 hover:bg-white/10 transition-colors text-sm"
+                className="flex items-center justify-center gap-2 bg-white/5 text-stone-300 font-bold py-3 rounded-xl border border-white/10 hover:bg-white/10 transition-colors text-xs"
               >
-                <Share2 size={18} /> Compartir
+                <Share2 size={16} /> Compartir
               </button>
               <button
                 onClick={() => {
                   setOrderSuccess(false);
                   localStorage.removeItem('orderSuccess');
                 }}
-                className="bg-stone-800 text-white font-bold py-4 rounded-xl hover:bg-stone-700 transition-colors text-sm"
+                className="bg-stone-800 text-white font-bold py-3 rounded-xl hover:bg-stone-700 transition-colors text-xs"
               >
                 Omitir
               </button>
@@ -472,37 +474,37 @@ export default function Menu() {
       <header className="bg-[#1A1A1A] text-white p-4 sticky top-0 z-40 shadow-md">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <div className="flex flex-col">
-            <h1 className="text-3xl font-display font-bold tracking-wider text-[#FDE047] leading-none">
+            <h1 className="text-2xl sm:text-3xl font-display font-bold tracking-wider text-[#FDE047] leading-none">
               BOCADO
             </h1>
-            <span className="text-xs font-bold tracking-widest text-white uppercase mt-1">
+            <span className="text-[10px] sm:text-xs font-bold tracking-widest text-white uppercase mt-1">
               Express
             </span>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-1.5 sm:gap-3">
             <button 
               onClick={() => setIsReviewsModalOpen(true)}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
+              className="p-1.5 sm:p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
               title="Ver Reseñas"
             >
-              <Star size={20} className="fill-[#FDE047]" />
-              <span className="text-xs font-bold hidden sm:inline">Reseñas</span>
+              <Star size={18} className="fill-[#FDE047] sm:w-5 sm:h-5" />
+              <span className="text-[10px] sm:text-xs font-bold">Reseñas</span>
             </button>
             <button 
               onClick={() => setIsLoyaltyModalOpen(true)}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
+              className="p-1.5 sm:p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
               title="Club Bocado"
             >
-              <Gift size={20} />
-              <span className="text-xs font-bold hidden sm:inline">Club Bocado</span>
+              <Gift size={18} className="sm:w-5 sm:h-5" />
+              <span className="text-[10px] sm:text-xs font-bold">Club Bocado</span>
             </button>
             <button 
               onClick={handleShare}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
+              className="p-1.5 sm:p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
               title="Compartir"
             >
-              <Share2 size={20} />
-              <span className="text-xs font-bold hidden sm:inline">Compartir</span>
+              <Share2 size={18} className="sm:w-5 sm:h-5" />
+              <span className="text-[10px] sm:text-xs font-bold">Compartir</span>
             </button>
           </div>
         </div>

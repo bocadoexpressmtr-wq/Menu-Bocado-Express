@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Store, Shield, Trash2, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { Save, Store, Shield, Trash2, AlertTriangle, CheckCircle, Loader2, MessageSquare } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { StoreSettings } from '../../types';
@@ -16,7 +16,10 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
     try {
       await updateDoc(doc(db, 'settings', 'store'), {
         isStoreOpen: editingSettings.isStoreOpen,
-        adminPin: editingSettings.adminPin || '021403'
+        adminPin: editingSettings.adminPin || '021403',
+        whatsappMessageHeader: editingSettings.whatsappMessageHeader,
+        whatsappMessageFooter: editingSettings.whatsappMessageFooter,
+        shareText: editingSettings.shareText
       });
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
@@ -123,6 +126,54 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
               />
             </div>
             <p className="text-xs text-stone-400 font-medium leading-relaxed">Este PIN se solicitará cada vez que intentes ingresar al panel desde un nuevo dispositivo.</p>
+          </div>
+        </div>
+
+        {/* Custom Messages Card */}
+        <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-stone-100 group">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-12 h-12 bg-stone-50 rounded-2xl flex items-center justify-center text-stone-400 group-hover:bg-stone-900 group-hover:text-white transition-all duration-300">
+              <MessageSquare size={24} />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-stone-900">Mensajes Personalizados</h3>
+              <p className="text-stone-400 text-xs font-medium">Personaliza los textos que ven tus clientes</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Encabezado WhatsApp</label>
+              <input 
+                type="text" 
+                value={editingSettings.whatsappMessageHeader || ''} 
+                onChange={e => setEditingSettings({...editingSettings, whatsappMessageHeader: e.target.value})} 
+                className="w-full px-6 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm" 
+                placeholder="🥪 *NUEVO PEDIDO - BOCADO EXPRESS*"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Pie de Mensaje WhatsApp</label>
+              <input 
+                type="text" 
+                value={editingSettings.whatsappMessageFooter || ''} 
+                onChange={e => setEditingSettings({...editingSettings, whatsappMessageFooter: e.target.value})} 
+                className="w-full px-6 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm" 
+                placeholder="Vengo de Menú Digital Bocado Express"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Texto de Compartir</label>
+              <textarea 
+                rows={2}
+                value={editingSettings.shareText || ''} 
+                onChange={e => setEditingSettings({...editingSettings, shareText: e.target.value})} 
+                className="w-full px-6 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm resize-none" 
+                placeholder="Los mejores cubanos y suizos de la ciudad"
+              />
+            </div>
           </div>
         </div>
 

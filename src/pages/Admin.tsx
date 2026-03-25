@@ -39,7 +39,10 @@ export default function Admin() {
     loyaltyGoal: 5,
     loyaltyMinOrder: 0,
     referralEnabled: true,
-    adminPin: '021403'
+    adminPin: '021403',
+    whatsappMessageHeader: '🥪 *NUEVO PEDIDO - BOCADO EXPRESS*',
+    whatsappMessageFooter: 'Vengo de Menú Digital Bocado Express',
+    shareText: 'Los mejores cubanos y suizos de la ciudad'
   });
 
   useEffect(() => {
@@ -54,7 +57,10 @@ export default function Admin() {
           loyaltyGoal: data.loyaltyGoal ?? 5,
           loyaltyMinOrder: data.loyaltyMinOrder ?? 0,
           referralEnabled: data.referralEnabled ?? true,
-          adminPin: data.adminPin ?? '021403'
+          adminPin: data.adminPin ?? '021403',
+          whatsappMessageHeader: data.whatsappMessageHeader ?? '🥪 *NUEVO PEDIDO - BOCADO EXPRESS*',
+          whatsappMessageFooter: data.whatsappMessageFooter ?? 'Vengo de Menú Digital Bocado Express',
+          shareText: data.shareText ?? 'Los mejores cubanos y suizos de la ciudad'
         });
       }
       setLoading(false);
