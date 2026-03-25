@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Save, Store, Shield, Trash2, AlertTriangle, CheckCircle, Loader2, MessageSquare } from 'lucide-react';
+import { Save, Store, Shield, Trash2, AlertTriangle, CheckCircle, Loader2, MessageSquare, Share2, Plus, Globe, Instagram, Facebook, Music2, MessageCircle, Youtube, Twitter } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { StoreSettings } from '../../types';
+import { StoreSettings, SocialLink } from '../../types';
 import { cn } from '../../lib/utils';
 
 export default function SettingsTab({ settings }: { settings: StoreSettings }) {
@@ -19,7 +19,8 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
         adminPin: editingSettings.adminPin || '021403',
         whatsappMessageHeader: editingSettings.whatsappMessageHeader,
         whatsappMessageFooter: editingSettings.whatsappMessageFooter,
-        shareText: editingSettings.shareText
+        shareText: editingSettings.shareText,
+        socialLinks: editingSettings.socialLinks || []
       });
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
@@ -28,6 +29,47 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
       alert("Error al guardar la configuración");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const addSocialLink = () => {
+    const newLink: SocialLink = {
+      id: Math.random().toString(36).substr(2, 9),
+      platform: 'Instagram',
+      url: '',
+      icon: 'Instagram'
+    };
+    setEditingSettings({
+      ...editingSettings,
+      socialLinks: [...(editingSettings.socialLinks || []), newLink]
+    });
+  };
+
+  const removeSocialLink = (id: string) => {
+    setEditingSettings({
+      ...editingSettings,
+      socialLinks: (editingSettings.socialLinks || []).filter(link => link.id !== id)
+    });
+  };
+
+  const updateSocialLink = (id: string, updates: Partial<SocialLink>) => {
+    setEditingSettings({
+      ...editingSettings,
+      socialLinks: (editingSettings.socialLinks || []).map(link => 
+        link.id === id ? { ...link, ...updates } : link
+      )
+    });
+  };
+
+  const getIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'Instagram': return <Instagram size={18} />;
+      case 'Facebook': return <Facebook size={18} />;
+      case 'Music2': return <Music2 size={18} />;
+      case 'MessageCircle': return <MessageCircle size={18} />;
+      case 'Youtube': return <Youtube size={18} />;
+      case 'Twitter': return <Twitter size={18} />;
+      default: return <Globe size={18} />;
     }
   };
 
@@ -174,6 +216,86 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
                 placeholder="Los mejores cubanos y suizos de la ciudad"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Social Links Card */}
+        <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-stone-100 group">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-stone-50 rounded-2xl flex items-center justify-center text-stone-400 group-hover:bg-stone-900 group-hover:text-white transition-all duration-300">
+                <Share2 size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-stone-900">Redes Sociales</h3>
+                <p className="text-stone-400 text-xs font-medium">Configura los enlaces de tu pie de página</p>
+              </div>
+            </div>
+            <button 
+              type="button"
+              onClick={addSocialLink}
+              className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-stone-800 transition-all active:scale-95"
+            >
+              <Plus size={14} />
+              Agregar Red
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {(editingSettings.socialLinks || []).map((link) => (
+              <div key={link.id} className="flex flex-col md:flex-row items-center gap-4 p-6 bg-stone-50 rounded-3xl border border-stone-100 group/link">
+                <div className="flex items-center gap-4 w-full md:w-auto">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-stone-900 shadow-sm">
+                    {getIcon(link.icon)}
+                  </div>
+                  <select 
+                    value={link.platform}
+                    onChange={e => {
+                      const platform = e.target.value;
+                      let icon = 'Globe';
+                      if (platform === 'Instagram') icon = 'Instagram';
+                      if (platform === 'Facebook') icon = 'Facebook';
+                      if (platform === 'TikTok') icon = 'Music2';
+                      if (platform === 'WhatsApp') icon = 'MessageCircle';
+                      if (platform === 'YouTube') icon = 'Youtube';
+                      if (platform === 'Twitter') icon = 'Twitter';
+                      updateSocialLink(link.id, { platform, icon });
+                    }}
+                    className="bg-transparent font-black text-xs uppercase tracking-widest outline-none cursor-pointer"
+                  >
+                    <option value="Instagram">Instagram</option>
+                    <option value="Facebook">Facebook</option>
+                    <option value="TikTok">TikTok</option>
+                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="YouTube">YouTube</option>
+                    <option value="Twitter">Twitter/X</option>
+                    <option value="Web">Sitio Web</option>
+                  </select>
+                </div>
+                
+                <input 
+                  type="url" 
+                  value={link.url}
+                  onChange={e => updateSocialLink(link.id, { url: e.target.value })}
+                  placeholder="https://..."
+                  className="flex-1 w-full px-4 py-2 bg-white border border-stone-100 rounded-xl text-sm font-medium focus:ring-2 focus:ring-stone-900 outline-none transition-all"
+                />
+
+                <button 
+                  type="button"
+                  onClick={() => removeSocialLink(link.id)}
+                  className="p-2 text-stone-300 hover:text-red-500 transition-colors"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            ))}
+
+            {(editingSettings.socialLinks || []).length === 0 && (
+              <div className="text-center py-12 border-2 border-dashed border-stone-100 rounded-[2rem]">
+                <p className="text-stone-400 text-sm font-medium">No has configurado redes sociales aún.</p>
+              </div>
+            )}
           </div>
         </div>
 

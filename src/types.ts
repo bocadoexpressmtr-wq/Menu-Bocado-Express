@@ -48,6 +48,13 @@ export interface Order {
   notes?: string;
 }
 
+export interface SocialLink {
+  id: string;
+  platform: string;
+  url: string;
+  icon: string;
+}
+
 export interface StoreSettings {
   isStoreOpen: boolean;
   loyaltyEnabled: boolean;
@@ -59,6 +66,7 @@ export interface StoreSettings {
   whatsappMessageHeader?: string;
   whatsappMessageFooter?: string;
   shareText?: string;
+  socialLinks?: SocialLink[];
 }
 
 export interface Customer {

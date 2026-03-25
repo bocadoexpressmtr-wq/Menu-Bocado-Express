@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, onSnapshot, query, orderBy, addDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ShoppingCart, MapPin, Send, Plus, Minus, Trash2, CheckCircle2, Instagram, Facebook, Music2, Gift, Info, X, Store, Bike, UtensilsCrossed, Wallet, Banknote, PartyPopper, Star, Share2 } from 'lucide-react';
+import { ShoppingCart, MapPin, Send, Plus, Minus, Trash2, CheckCircle2, Instagram, Facebook, Music2, Gift, Info, X, Store, Bike, UtensilsCrossed, Wallet, Banknote, PartyPopper, Star, Share2, Globe, MessageCircle, Youtube, Twitter } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Product, Category, CartItem, DeliveryType, PaymentMethod, StoreSettings, Customer, Review } from '../types';
 
@@ -469,9 +469,9 @@ export default function Menu() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1A1A1A] font-sans pb-32">
+    <div className="min-h-screen bg-[#F8F9FA] text-[#1A1A1A] font-sans flex flex-col">
       {/* Header */}
-      <header className="bg-[#1A1A1A] text-white p-4 sticky top-0 z-40 shadow-md">
+      <header className="bg-[#1A1A1A] text-white p-4 sticky top-0 z-40 shadow-md shrink-0">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <div className="flex flex-col">
             <h1 className="text-3xl font-display font-bold tracking-wider text-[#FDE047] leading-none">
@@ -585,7 +585,7 @@ export default function Menu() {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto p-4 pt-6">
+      <main className="max-w-4xl w-full mx-auto p-4 pt-6 flex-1 pb-32">
         {categories.length === 0 && products.length === 0 ? (
           <div className="text-center py-20 text-stone-500">
             <p>Cargando el menú...</p>
@@ -645,21 +645,42 @@ export default function Menu() {
       </main>
 
       {/* Footer / Social Media */}
-      <footer className="bg-[#1A1A1A] text-white py-12 mt-8 rounded-t-3xl">
+      <footer className="bg-[#1A1A1A] text-white py-12 mt-8 rounded-t-3xl shrink-0">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h3 className="font-display font-bold text-2xl text-[#FDE047] uppercase tracking-widest mb-2">Bocado Express</h3>
           <p className="text-stone-400 text-sm font-medium mb-6 uppercase tracking-wider">Síguenos y Comparte</p>
           
-          <div className="flex justify-center gap-6 mb-8">
-            <a href="https://instagram.com/BOCADOEXPRESS.MTR" target="_blank" rel="noopener noreferrer" className="bg-white/10 p-4 rounded-full hover:bg-[#E3242B] hover:text-white transition-colors text-[#FDE047]">
-              <Instagram size={24} />
-            </a>
-            <a href="https://facebook.com/BOCADOEXPRESS.MTR" target="_blank" rel="noopener noreferrer" className="bg-white/10 p-4 rounded-full hover:bg-[#E3242B] hover:text-white transition-colors text-[#FDE047]">
-              <Facebook size={24} />
-            </a>
-            <a href="https://tiktok.com/@BOCADOEXPRESS.MTR" target="_blank" rel="noopener noreferrer" className="bg-white/10 p-4 rounded-full hover:bg-[#E3242B] hover:text-white transition-colors text-[#FDE047]">
-              <Music2 size={24} />
-            </a>
+          <div className="flex justify-center flex-wrap gap-6 mb-8">
+            {(settings.socialLinks || [
+              { id: '1', platform: 'Instagram', url: 'https://instagram.com/BOCADOEXPRESS.MTR', icon: 'Instagram' },
+              { id: '2', platform: 'Facebook', url: 'https://facebook.com/BOCADOEXPRESS.MTR', icon: 'Facebook' },
+              { id: '3', platform: 'TikTok', url: 'https://tiktok.com/@BOCADOEXPRESS.MTR', icon: 'Music2' }
+            ]).map((link) => {
+              const getIcon = (iconName: string) => {
+                switch (iconName) {
+                  case 'Instagram': return <Instagram size={24} />;
+                  case 'Facebook': return <Facebook size={24} />;
+                  case 'Music2': return <Music2 size={24} />;
+                  case 'MessageCircle': return <MessageCircle size={24} />;
+                  case 'Youtube': return <Youtube size={24} />;
+                  case 'Twitter': return <Twitter size={24} />;
+                  default: return <Globe size={24} />;
+                }
+              };
+
+              return (
+                <a 
+                  key={link.id}
+                  href={link.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="bg-white/10 p-4 rounded-full hover:bg-[#E3242B] hover:text-white transition-colors text-[#FDE047]"
+                  title={link.platform}
+                >
+                  {getIcon(link.icon)}
+                </a>
+              );
+            })}
           </div>
           
           <p className="text-stone-500 text-xs font-medium">@BOCADOEXPRESS.MTR</p>

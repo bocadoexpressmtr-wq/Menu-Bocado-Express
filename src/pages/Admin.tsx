@@ -42,7 +42,12 @@ export default function Admin() {
     adminPin: '021403',
     whatsappMessageHeader: '🥪 *NUEVO PEDIDO - BOCADO EXPRESS*',
     whatsappMessageFooter: 'Vengo de Menú Digital Bocado Express',
-    shareText: 'Los mejores cubanos y suizos de la ciudad'
+    shareText: 'Los mejores cubanos y suizos de la ciudad',
+    socialLinks: [
+      { id: '1', platform: 'Instagram', url: 'https://instagram.com/BOCADOEXPRESS.MTR', icon: 'Instagram' },
+      { id: '2', platform: 'Facebook', url: 'https://facebook.com/BOCADOEXPRESS.MTR', icon: 'Facebook' },
+      { id: '3', platform: 'TikTok', url: 'https://tiktok.com/@BOCADOEXPRESS.MTR', icon: 'Music2' }
+    ]
   });
 
   useEffect(() => {
@@ -60,7 +65,12 @@ export default function Admin() {
           adminPin: data.adminPin ?? '021403',
           whatsappMessageHeader: data.whatsappMessageHeader ?? '🥪 *NUEVO PEDIDO - BOCADO EXPRESS*',
           whatsappMessageFooter: data.whatsappMessageFooter ?? 'Vengo de Menú Digital Bocado Express',
-          shareText: data.shareText ?? 'Los mejores cubanos y suizos de la ciudad'
+          shareText: data.shareText ?? 'Los mejores cubanos y suizos de la ciudad',
+          socialLinks: data.socialLinks ?? [
+            { id: '1', platform: 'Instagram', url: 'https://instagram.com/BOCADOEXPRESS.MTR', icon: 'Instagram' },
+            { id: '2', platform: 'Facebook', url: 'https://facebook.com/BOCADOEXPRESS.MTR', icon: 'Facebook' },
+            { id: '3', platform: 'TikTok', url: 'https://tiktok.com/@BOCADOEXPRESS.MTR', icon: 'Music2' }
+          ]
         });
       }
       setLoading(false);
