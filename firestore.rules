@@ -82,18 +82,22 @@ service cloud.firestore {
     }
 
     function isValidSettings() {
-      return hasRequiredFields(['isStoreOpen', 'loyaltyPrize', 'loyaltyGoal', 'referralEnabled', 'loyaltyEnabled']) &&
+      return hasRequiredFields(['isStoreOpen', 'loyaltyPrize', 'loyaltyGoal', 'referralEnabled', 'loyaltyEnabled', 'adminPin', 'loyaltyMinOrder']) &&
              request.resource.data.isStoreOpen is bool &&
              validStringLength('loyaltyPrize', 1, 100) &&
              request.resource.data.loyaltyGoal is number &&
              request.resource.data.loyaltyGoal > 0 &&
+             request.resource.data.loyaltyMinOrder is number &&
+             request.resource.data.loyaltyMinOrder >= 0 &&
              request.resource.data.referralEnabled is bool &&
-             request.resource.data.loyaltyEnabled is bool;
+             request.resource.data.loyaltyEnabled is bool &&
+             validStringLength('adminPin', 6, 6);
     }
 
     function isValidCustomer() {
-      return hasRequiredFields(['phone', 'stamps', 'createdAt']) &&
+      return hasRequiredFields(['phone', 'stamps', 'createdAt', 'name']) &&
              validStringLength('phone', 1, 20) &&
+             validStringLength('name', 1, 100) &&
              request.resource.data.stamps is number &&
              request.resource.data.stamps >= 0 &&
              (!('referredBy' in request.resource.data) || validStringLength('referredBy', 0, 20));

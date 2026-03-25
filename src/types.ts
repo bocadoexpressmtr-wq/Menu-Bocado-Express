@@ -53,6 +53,7 @@ export interface StoreSettings {
   loyaltyEnabled: boolean;
   loyaltyPrize: string;
   loyaltyGoal: number;
+  loyaltyMinOrder: number;
   referralEnabled: boolean;
   adminPin?: string;
 }
@@ -60,6 +61,7 @@ export interface StoreSettings {
 export interface Customer {
   id?: string;
   phone: string;
+  name: string;
   stamps: number;
   referredBy?: string;
   createdAt: string;

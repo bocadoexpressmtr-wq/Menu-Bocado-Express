@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Plus, Edit2, Trash2, DatabaseZap, X, Save, Upload, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, DatabaseZap, X, Save, Upload, Loader2, Package } from 'lucide-react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase';
+import { cn } from '../../lib/utils';
 import { Product, Category } from '../../types';
 
 export default function ProductsTab({ products, categories }: { products: Product[], categories: Category[] }) {
@@ -11,6 +12,16 @@ export default function ProductsTab({ products, categories }: { products: Produc
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const convertDriveUrl = (url: string) => {
+    if (url.includes('drive.google.com')) {
+      const idMatch = url.match(/\/d\/(.+?)\//) || url.match(/id=(.+?)(&|$)/);
+      if (idMatch && idMatch[1]) {
+        return `https://drive.google.com/uc?id=${idMatch[1]}&export=download`;
+      }
+    }
+    return url;
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -34,8 +45,12 @@ export default function ProductsTab({ products, categories }: { products: Produc
         setUploadProgress(progress);
       }, 
       (error) => {
-        console.error("Upload error:", error);
-        alert("Error al subir la imagen. Verifica los permisos de Firebase Storage.");
+        console.error("Upload error details:", {
+          code: error.code,
+          message: error.message,
+          serverResponse: error.serverResponse
+        });
+        alert(`Error al subir la imagen: ${error.message}. Verifica los permisos de Firebase Storage.`);
         setIsUploading(false);
       }, 
       async () => {
@@ -55,20 +70,20 @@ export default function ProductsTab({ products, categories }: { products: Produc
     }
 
     try {
+      const finalProduct = {
+        ...editingProduct,
+        imageUrl: convertDriveUrl(editingProduct.imageUrl || ''),
+        price: Number(editingProduct.price),
+        isAvailable: editingProduct.isAvailable ?? true,
+        isPopular: editingProduct.isPopular ?? false,
+        isDailyOffer: editingProduct.isDailyOffer ?? false,
+        isUpsell: editingProduct.isUpsell ?? false,
+      };
+
       if (isAdding) {
-        await addDoc(collection(db, 'products'), {
-          ...editingProduct,
-          price: Number(editingProduct.price),
-          isAvailable: editingProduct.isAvailable ?? true,
-          isPopular: editingProduct.isPopular ?? false,
-          isDailyOffer: editingProduct.isDailyOffer ?? false,
-          isUpsell: editingProduct.isUpsell ?? false,
-        });
+        await addDoc(collection(db, 'products'), finalProduct);
       } else if (editingProduct.id) {
-        await updateDoc(doc(db, 'products', editingProduct.id), {
-          ...editingProduct,
-          price: Number(editingProduct.price)
-        });
+        await updateDoc(doc(db, 'products', editingProduct.id), finalProduct);
       }
       setEditingProduct(null);
       setIsAdding(false);
@@ -90,51 +105,55 @@ export default function ProductsTab({ products, categories }: { products: Produc
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-stone-900">Productos</h2>
-        <div className="flex gap-2">
-          <button onClick={() => { setIsAdding(true); setEditingProduct({ isAvailable: true }); }} className="bg-stone-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-stone-800 text-sm font-medium shadow-sm">
-            <Plus size={16} /> Nuevo Producto
-          </button>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h2 className="text-3xl font-black text-stone-900 tracking-tight">Menú de Productos</h2>
+          <p className="text-stone-500 text-sm">Gestiona los platos y bebidas de tu restaurante</p>
         </div>
+        <button 
+          onClick={() => { setIsAdding(true); setEditingProduct({ isAvailable: true }); }} 
+          className="w-full md:w-auto bg-stone-900 text-white px-6 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-stone-800 text-sm font-black uppercase tracking-wider shadow-lg shadow-stone-200 transition-all active:scale-95"
+        >
+          <Plus size={18} /> Nuevo Producto
+        </button>
       </div>
 
       {(isAdding || editingProduct) && (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold">{isAdding ? 'Nuevo Producto' : 'Editar Producto'}</h3>
-            <button onClick={() => { setEditingProduct(null); setIsAdding(false); }} className="text-stone-400 hover:text-stone-600"><X size={20} /></button>
+        <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-xl border border-stone-100 mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-black text-stone-900">{isAdding ? 'Crear Nuevo Producto' : 'Editar Producto'}</h3>
+            <button onClick={() => { setEditingProduct(null); setIsAdding(false); }} className="w-10 h-10 flex items-center justify-center rounded-full bg-stone-50 text-stone-400 hover:text-stone-600 transition-colors"><X size={20} /></button>
           </div>
-          <form onSubmit={handleSave} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Nombre</label>
-                <input required type="text" value={editingProduct?.name || ''} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none" />
+          <form onSubmit={handleSave} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">Nombre del Plato</label>
+                <input required type="text" value={editingProduct?.name || ''} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} className="w-full px-4 py-3 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium" placeholder="Ej: Suizo Clásico" />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Precio</label>
-                <input required type="number" value={editingProduct?.price || ''} onChange={e => setEditingProduct({...editingProduct, price: Number(e.target.value)})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none" />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">Precio (COP)</label>
+                <input required type="number" value={editingProduct?.price || ''} onChange={e => setEditingProduct({...editingProduct, price: Number(e.target.value)})} className="w-full px-4 py-3 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-bold" placeholder="Ej: 14000" />
               </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-stone-700 mb-1">Descripción</label>
-                <textarea value={editingProduct?.description || ''} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none" rows={2} />
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">Descripción / Ingredientes</label>
+                <textarea value={editingProduct?.description || ''} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full px-4 py-3 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium min-h-[100px]" placeholder="Describe los ingredientes y detalles del plato..." />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Categoría</label>
-                <select required value={editingProduct?.categoryId || ''} onChange={e => setEditingProduct({...editingProduct, categoryId: e.target.value})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">Categoría</label>
+                <select required value={editingProduct?.categoryId || ''} onChange={e => setEditingProduct({...editingProduct, categoryId: e.target.value})} className="w-full px-4 py-3 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-bold appearance-none">
                   <option value="">Selecciona una categoría</option>
                   {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Imagen del Producto</label>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">Imagen (URL o Archivo)</label>
                 <div className="flex gap-2">
                   <input 
                     type="text" 
-                    placeholder="URL de imagen"
+                    placeholder="Pega URL de Drive o Web"
                     value={editingProduct?.imageUrl || ''} 
                     onChange={e => setEditingProduct({...editingProduct, imageUrl: e.target.value})} 
-                    className="flex-1 px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none text-sm" 
+                    className="flex-1 px-4 py-3 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all text-sm font-medium" 
                   />
                   <input 
                     type="file" 
@@ -147,94 +166,124 @@ export default function ProductsTab({ products, categories }: { products: Produc
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploading}
-                    className="bg-stone-100 text-stone-700 px-3 py-2 rounded-lg hover:bg-stone-200 transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50"
+                    className="bg-stone-900 text-white px-4 py-3 rounded-2xl hover:bg-stone-800 transition-all flex items-center gap-2 text-xs font-black uppercase tracking-wider disabled:opacity-50 shadow-md"
                   >
                     {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                     {isUploading ? `${Math.round(uploadProgress)}%` : 'Subir'}
                   </button>
                 </div>
                 {editingProduct?.imageUrl && (
-                  <div className="mt-2 relative w-20 h-20 rounded-lg overflow-hidden border border-stone-200">
+                  <div className="mt-3 relative w-24 h-24 rounded-2xl overflow-hidden border-2 border-stone-100 shadow-sm">
                     <img src={editingProduct.imageUrl} alt="Preview" className="w-full h-full object-cover" />
                     <button 
                       type="button"
                       onClick={() => setEditingProduct({...editingProduct, imageUrl: ''})}
-                      className="absolute top-0 right-0 bg-red-500 text-white p-0.5 rounded-bl-lg hover:bg-red-600"
+                      className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center hover:bg-red-600 shadow-md"
                     >
-                      <X size={12} />
+                      <X size={14} />
                     </button>
                   </div>
                 )}
               </div>
             </div>
-            <div className="flex gap-4 pt-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-stone-700 cursor-pointer">
-                <input type="checkbox" checked={editingProduct?.isAvailable ?? true} onChange={e => setEditingProduct({...editingProduct, isAvailable: e.target.checked})} className="rounded text-stone-900 focus:ring-stone-900" />
-                Disponible
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-stone-50 rounded-2xl border border-stone-100">
+              <label className="flex items-center gap-3 p-2 cursor-pointer group">
+                <div className={cn("w-5 h-5 rounded border-2 flex items-center justify-center transition-all", (editingProduct?.isAvailable ?? true) ? "bg-stone-900 border-stone-900" : "border-stone-300")}>
+                  {(editingProduct?.isAvailable ?? true) && <div className="w-2 h-2 bg-white rounded-full" />}
+                </div>
+                <input type="checkbox" checked={editingProduct?.isAvailable ?? true} onChange={e => setEditingProduct({...editingProduct, isAvailable: e.target.checked})} className="hidden" />
+                <span className="text-xs font-bold text-stone-600 uppercase tracking-tight">Disponible</span>
               </label>
-              <label className="flex items-center gap-2 text-sm font-medium text-stone-700 cursor-pointer">
-                <input type="checkbox" checked={editingProduct?.isPopular ?? false} onChange={e => setEditingProduct({...editingProduct, isPopular: e.target.checked})} className="rounded text-stone-900 focus:ring-stone-900" />
-                Popular
+              <label className="flex items-center gap-3 p-2 cursor-pointer group">
+                <div className={cn("w-5 h-5 rounded border-2 flex items-center justify-center transition-all", (editingProduct?.isPopular ?? false) ? "bg-amber-500 border-amber-500" : "border-stone-300")}>
+                  {(editingProduct?.isPopular ?? false) && <div className="w-2 h-2 bg-white rounded-full" />}
+                </div>
+                <input type="checkbox" checked={editingProduct?.isPopular ?? false} onChange={e => setEditingProduct({...editingProduct, isPopular: e.target.checked})} className="hidden" />
+                <span className="text-xs font-bold text-stone-600 uppercase tracking-tight">Popular</span>
               </label>
-              <label className="flex items-center gap-2 text-sm font-medium text-stone-700 cursor-pointer">
-                <input type="checkbox" checked={editingProduct?.isDailyOffer ?? false} onChange={e => setEditingProduct({...editingProduct, isDailyOffer: e.target.checked})} className="rounded text-stone-900 focus:ring-stone-900" />
-                Oferta del Día
+              <label className="flex items-center gap-3 p-2 cursor-pointer group">
+                <div className={cn("w-5 h-5 rounded border-2 flex items-center justify-center transition-all", (editingProduct?.isDailyOffer ?? false) ? "bg-red-500 border-red-500" : "border-stone-300")}>
+                  {(editingProduct?.isDailyOffer ?? false) && <div className="w-2 h-2 bg-white rounded-full" />}
+                </div>
+                <input type="checkbox" checked={editingProduct?.isDailyOffer ?? false} onChange={e => setEditingProduct({...editingProduct, isDailyOffer: e.target.checked})} className="hidden" />
+                <span className="text-xs font-bold text-stone-600 uppercase tracking-tight">Oferta</span>
               </label>
-              <label className="flex items-center gap-2 text-sm font-medium text-stone-700 cursor-pointer">
-                <input type="checkbox" checked={editingProduct?.isUpsell ?? false} onChange={e => setEditingProduct({...editingProduct, isUpsell: e.target.checked})} className="rounded text-stone-900 focus:ring-stone-900" />
-                Upsell (Carrito)
+              <label className="flex items-center gap-3 p-2 cursor-pointer group">
+                <div className={cn("w-5 h-5 rounded border-2 flex items-center justify-center transition-all", (editingProduct?.isUpsell ?? false) ? "bg-blue-500 border-blue-500" : "border-stone-300")}>
+                  {(editingProduct?.isUpsell ?? false) && <div className="w-2 h-2 bg-white rounded-full" />}
+                </div>
+                <input type="checkbox" checked={editingProduct?.isUpsell ?? false} onChange={e => setEditingProduct({...editingProduct, isUpsell: e.target.checked})} className="hidden" />
+                <span className="text-xs font-bold text-stone-600 uppercase tracking-tight">Upsell</span>
               </label>
             </div>
-            <div className="flex justify-end pt-4 border-t border-stone-100">
-              <button type="submit" className="bg-stone-900 text-white px-6 py-2 rounded-xl flex items-center gap-2 hover:bg-stone-800 font-medium">
-                <Save size={16} /> Guardar
+
+            <div className="flex justify-end pt-6 border-t border-stone-50 gap-3">
+              <button type="button" onClick={() => { setEditingProduct(null); setIsAdding(false); }} className="px-6 py-3 rounded-2xl text-stone-400 font-black uppercase tracking-wider text-xs hover:text-stone-600 transition-colors">Cancelar</button>
+              <button type="submit" className="bg-stone-900 text-white px-8 py-3 rounded-2xl flex items-center gap-2 hover:bg-stone-800 font-black uppercase tracking-wider text-xs shadow-lg shadow-stone-200 transition-all active:scale-95">
+                <Save size={18} /> Guardar Cambios
               </button>
             </div>
           </form>
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-stone-50 text-stone-500 border-b border-stone-200">
-            <tr>
-              <th className="px-6 py-4 font-medium">Nombre</th>
-              <th className="px-6 py-4 font-medium">Precio</th>
-              <th className="px-6 py-4 font-medium">Categoría</th>
-              <th className="px-6 py-4 font-medium">Estado</th>
-              <th className="px-6 py-4 font-medium text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-stone-100">
-            {products.map(product => (
-              <tr key={product.id} className="hover:bg-stone-50">
-                <td className="px-6 py-4 font-medium text-stone-900">
-                  {product.name}
-                  {product.isDailyOffer && <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Oferta</span>}
-                  {product.isPopular && <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Popular</span>}
-                </td>
-                <td className="px-6 py-4">${product.price.toFixed(2)}</td>
-                <td className="px-6 py-4">
-                  {categories.find(c => c.id === product.categoryId)?.name || 'Desconocida'}
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {product.isAvailable ? 'Disponible' : 'Agotado'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button onClick={() => { setIsAdding(false); setEditingProduct(product); }} className="text-stone-400 hover:text-blue-600 p-1"><Edit2 size={16} /></button>
-                  <button onClick={() => handleDelete(product.id)} className="text-stone-400 hover:text-red-600 p-1 ml-2"><Trash2 size={16} /></button>
-                </td>
-              </tr>
-            ))}
-            {products.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-stone-500">No hay productos. Agrega uno nuevo.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {products.map(product => (
+          <div key={product.id} className="bg-white rounded-[2rem] shadow-sm border border-stone-100 overflow-hidden group hover:shadow-xl hover:shadow-stone-200/50 transition-all duration-300 flex flex-col">
+            <div className="relative h-48 overflow-hidden">
+              {product.imageUrl ? (
+                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+              ) : (
+                <div className="w-full h-full bg-stone-50 flex items-center justify-center text-stone-200">
+                  <Package size={48} />
+                </div>
+              )}
+              <div className="absolute top-4 right-4 flex flex-col gap-2">
+                {product.isDailyOffer && <span className="bg-red-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">Oferta</span>}
+                {product.isPopular && <span className="bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">Popular</span>}
+              </div>
+              {!product.isAvailable && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
+                  <span className="bg-stone-900 text-white text-xs font-black uppercase tracking-[0.2em] px-4 py-2 rounded-xl shadow-xl">Agotado</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-6 flex-1 flex flex-col">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">
+                    {categories.find(c => c.id === product.categoryId)?.name || 'Sin Categoría'}
+                  </p>
+                  <h3 className="text-xl font-black text-stone-900 leading-tight">{product.name}</h3>
+                </div>
+                <p className="text-lg font-black text-emerald-600">${product.price.toLocaleString()}</p>
+              </div>
+              
+              <p className="text-stone-500 text-xs font-medium line-clamp-2 mb-6 flex-1">{product.description || 'Sin descripción disponible.'}</p>
+              
+              <div className="flex items-center justify-between pt-4 border-t border-stone-50">
+                <div className="flex items-center gap-2">
+                  <div className={cn("w-2 h-2 rounded-full", product.isAvailable ? "bg-emerald-500" : "bg-red-500")} />
+                  <span className="text-[10px] font-black text-stone-400 uppercase tracking-wider">{product.isAvailable ? 'Activo' : 'Inactivo'}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => { setIsAdding(false); setEditingProduct(product); }} className="p-2 text-stone-400 hover:text-stone-900 hover:bg-stone-50 rounded-xl transition-all active:scale-90"><Edit2 size={18} /></button>
+                  <button onClick={() => handleDelete(product.id)} className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all active:scale-90"><Trash2 size={18} /></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+        {products.length === 0 && (
+          <div className="col-span-full bg-white rounded-[2rem] border border-stone-100 p-12 text-center">
+            <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center text-stone-200 mx-auto mb-4">
+              <Package size={32} />
+            </div>
+            <p className="text-stone-400 font-medium">No hay productos en el menú. ¡Empieza agregando uno!</p>
+          </div>
+        )}
       </div>
     </div>
   );

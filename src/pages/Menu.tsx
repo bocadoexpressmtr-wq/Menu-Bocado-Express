@@ -22,18 +22,26 @@ export default function Menu() {
   const [deliveryType, setDeliveryType] = useState<DeliveryType>('domicilio');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('nequi');
   const [cashAmount, setCashAmount] = useState<string>('');
-  const [customerName, setCustomerName] = useState('');
+  const [customerName, setCustomerName] = useState(() => {
+    return localStorage.getItem('lastCustomerName') || '';
+  });
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
-  const [loyaltyOptIn, setLoyaltyOptIn] = useState(false);
+  const [loyaltyOptIn, setLoyaltyOptIn] = useState(() => {
+    return localStorage.getItem('lastLoyaltyOptIn') === 'true';
+  });
   const [isLocating, setIsLocating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(() => {
+    return localStorage.getItem('orderSuccess') === 'true';
+  });
 
   // Loyalty Modal State
   const [isLoyaltyModalOpen, setIsLoyaltyModalOpen] = useState(false);
   const [loyaltyPhoneInput, setLoyaltyPhoneInput] = useState('');
+  const [loyaltyNameInput, setLoyaltyNameInput] = useState('');
+  const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [loyaltyCustomer, setLoyaltyCustomer] = useState<Customer | null>(null);
   const [isCheckingLoyalty, setIsCheckingLoyalty] = useState(false);
 
@@ -154,12 +162,23 @@ export default function Menu() {
         },
         (error) => {
           console.error("Error getting location", error);
-          alert("No pudimos obtener tu ubicación. Por favor, ingresa tu dirección manualmente.");
+          let errorMessage = "No pudimos obtener tu ubicación.";
+          
+          if (error.code === error.PERMISSION_DENIED) {
+            errorMessage = "Permiso denegado. Por favor, activa los permisos de ubicación en tu navegador para usar el GPS.";
+          } else if (error.code === error.POSITION_UNAVAILABLE) {
+            errorMessage = "La información de ubicación no está disponible en este momento.";
+          } else if (error.code === error.TIMEOUT) {
+            errorMessage = "Se agotó el tiempo de espera para obtener la ubicación.";
+          }
+          
+          alert(`${errorMessage}\n\nSi no puedes activar el GPS, asegúrate de escribir tu dirección detallada y puntos de referencia.`);
           setIsLocating(false);
-        }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     } else {
-      alert("Tu navegador no soporta geolocalización.");
+      alert("Tu navegador no soporta geolocalización. Por favor, ingresa tu dirección manualmente.");
       setIsLocating(false);
     }
   };
@@ -173,18 +192,35 @@ export default function Menu() {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setLoyaltyCustomer(docSnap.data() as Customer);
+        setIsNewCustomer(false);
       } else {
-        // Create new customer
-        const newCustomer: Customer = {
-          phone: loyaltyPhoneInput,
-          stamps: 0,
-          createdAt: new Date().toISOString()
-        };
-        await setDoc(docRef, newCustomer);
-        setLoyaltyCustomer(newCustomer);
+        setIsNewCustomer(true);
+        setLoyaltyCustomer(null);
       }
     } catch (error) {
       console.error("Error checking loyalty", error);
+    } finally {
+      setIsCheckingLoyalty(false);
+    }
+  };
+
+  const registerLoyalty = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loyaltyPhoneInput || !loyaltyNameInput) return;
+    setIsCheckingLoyalty(true);
+    try {
+      const docRef = doc(db, 'customers', loyaltyPhoneInput);
+      const newCustomer: Customer = {
+        phone: loyaltyPhoneInput,
+        name: loyaltyNameInput,
+        stamps: 0,
+        createdAt: new Date().toISOString()
+      };
+      await setDoc(docRef, newCustomer);
+      setLoyaltyCustomer(newCustomer);
+      setIsNewCustomer(false);
+    } catch (error) {
+      console.error("Error registering loyalty", error);
     } finally {
       setIsCheckingLoyalty(false);
     }
@@ -195,7 +231,11 @@ export default function Menu() {
     if (cart.length === 0) return alert("Tu carrito está vacío");
     if (!customerName || !customerPhone) return alert("Por favor llena tu nombre y teléfono");
     if (deliveryType === 'domicilio' && !customerAddress) return alert("Por favor ingresa tu dirección");
-    if (deliveryType === 'domicilio' && !location) return alert("📍 Por favor, comparte tu ubicación GPS. Es obligatoria para que el repartidor pueda llegar exacto a tu dirección.");
+    // GPS is now optional but recommended
+    if (deliveryType === 'domicilio' && !location) {
+      const confirmNoGPS = window.confirm("📍 No has compartido tu ubicación GPS. ¿Deseas continuar solo con la dirección escrita? (El GPS ayuda al repartidor a llegar más rápido)");
+      if (!confirmNoGPS) return;
+    }
     if (paymentMethod === 'efectivo' && !cashAmount) return alert("Por favor indica con cuánto vas a pagar");
 
     setIsSubmitting(true);
@@ -207,6 +247,7 @@ export default function Menu() {
         if (!docSnap.exists()) {
           await setDoc(docRef, {
             phone: customerPhone,
+            name: customerName,
             stamps: 0,
             createdAt: new Date().toISOString()
           });
@@ -246,7 +287,7 @@ export default function Menu() {
       if (deliveryType === 'domicilio') {
         message += `*Dirección:* ${customerAddress}\n`;
         if (location) {
-          message += `*Ubicación GPS:* https://maps.google.com/?q=${location.lat},${location.lng}\n`;
+          message += `*Ubicación GPS:* https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}\n`;
         }
       }
       
@@ -276,19 +317,14 @@ export default function Menu() {
       const whatsappUrl = `https://wa.me/573144052399?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
 
+      // Persist success state
+      localStorage.setItem('orderSuccess', 'true');
+      localStorage.setItem('lastCustomerName', customerName);
+      localStorage.setItem('lastLoyaltyOptIn', String(loyaltyOptIn));
+
       setOrderSuccess(true);
       setCart([]);
       setIsCartOpen(false);
-      
-      // Don't clear form data immediately so they see the success screen
-      setTimeout(() => {
-        setOrderSuccess(false);
-        setCustomerName('');
-        setCustomerPhone('');
-        setCustomerAddress('');
-        setCashAmount('');
-        setLocation(null);
-      }, 10000); // Show success screen for 10 seconds
       
     } catch (error) {
       console.error("Error submitting order", error);
@@ -323,7 +359,18 @@ export default function Menu() {
       alert("¡Gracias por tu reseña! La hemos recibido.");
       setReviewText('');
       setReviewRating(5);
+      
+      // Clear persisted state
+      localStorage.removeItem('orderSuccess');
+      localStorage.removeItem('lastCustomerName');
+      localStorage.removeItem('lastLoyaltyOptIn');
+      
       setOrderSuccess(false); // Close success screen
+      setCustomerName('');
+      setCustomerPhone('');
+      setCustomerAddress('');
+      setCashAmount('');
+      setLocation(null);
     } catch (error) {
       console.error("Error submitting review", error);
       alert("Hubo un error al enviar tu reseña.");
@@ -400,6 +447,9 @@ export default function Menu() {
 
         <button 
           onClick={() => {
+            localStorage.removeItem('orderSuccess');
+            localStorage.removeItem('lastCustomerName');
+            localStorage.removeItem('lastLoyaltyOptIn');
             setOrderSuccess(false);
             setCustomerName('');
             setCustomerPhone('');
@@ -647,74 +697,74 @@ export default function Menu() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 pb-32">
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-100 mb-6">
-                {cart.map(item => (
-                  <div key={item.id} className="flex gap-3 items-center border-b border-stone-100 py-3 last:border-0 last:pb-0 first:pt-0">
-                    <div className="flex-1">
-                      <h4 className="font-bold text-sm text-[#1A1A1A]">{item.name}</h4>
-                      <span className="text-[#E3242B] font-bold text-sm">{formatPrice(item.price * item.quantity)}</span>
+            <form onSubmit={submitOrder} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-100">
+                  {cart.map(item => (
+                    <div key={item.id} className="flex gap-3 items-center border-b border-stone-100 py-3 last:border-0 last:pb-0 first:pt-0">
+                      <div className="flex-1">
+                        <h4 className="font-bold text-sm text-[#1A1A1A]">{item.name}</h4>
+                        <span className="text-[#E3242B] font-bold text-sm">{formatPrice(item.price * item.quantity)}</span>
+                      </div>
+                      <div className="flex items-center gap-3 bg-stone-100 rounded-full px-2 py-1">
+                        <button type="button" onClick={() => updateQuantity(item.id, -1)} className="text-stone-500 hover:text-[#E3242B] p-1">
+                          {item.quantity === 1 ? <Trash2 size={14} /> : <Minus size={14} strokeWidth={3} />}
+                        </button>
+                        <span className="font-bold w-4 text-center text-sm">{item.quantity}</span>
+                        <button type="button" onClick={() => updateQuantity(item.id, 1)} className="text-stone-500 hover:text-green-600 p-1">
+                          <Plus size={14} strokeWidth={3} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 bg-stone-100 rounded-full px-2 py-1">
-                      <button onClick={() => updateQuantity(item.id, -1)} className="text-stone-500 hover:text-[#E3242B] p-1">
-                        {item.quantity === 1 ? <Trash2 size={14} /> : <Minus size={14} strokeWidth={3} />}
-                      </button>
-                      <span className="font-bold w-4 text-center text-sm">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.id, 1)} className="text-stone-500 hover:text-green-600 p-1">
-                        <Plus size={14} strokeWidth={3} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Order Notes & Cross-selling */}
-              <div className="mb-6 space-y-3">
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
-                  <label className="block text-sm font-bold text-[#1A1A1A] mb-2">¿Falta algo o tienes alguna nota?</label>
-                  <textarea 
-                    placeholder="Ej: Sin cebolla, salsas aparte..." 
-                    value={orderNotes}
-                    onChange={e => setOrderNotes(e.target.value)}
-                    className="w-full p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-[#E3242B] bg-stone-50 min-h-[60px] text-sm mb-3"
-                  />
-                  
-                  {upsellProducts.length > 0 && (
-                    <div>
-                      <button 
-                        type="button"
-                        onClick={() => setIsUpsellOpen(!isUpsellOpen)}
-                        className="w-full flex items-center justify-between p-3 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm border border-blue-100"
-                      >
-                        <span>¿Agregar bebidas o adiciones?</span>
-                        <Plus size={16} className={cn("transition-transform", isUpsellOpen && "rotate-45")} />
-                      </button>
-                      
-                      {isUpsellOpen && (
-                        <div className="mt-3 flex overflow-x-auto gap-3 pb-2 hide-scrollbar">
-                          {upsellProducts.map(product => (
-                            <div key={product.id} className="bg-white rounded-xl p-2 shadow-sm border border-blue-100 min-w-[140px] shrink-0 flex flex-col justify-between">
-                              <div>
-                                <h5 className="font-bold text-xs text-[#1A1A1A] line-clamp-1">{product.name}</h5>
-                                <span className="text-[#E3242B] font-bold text-xs">{formatPrice(product.price)}</span>
-                              </div>
-                              <button 
-                                type="button"
-                                onClick={() => addToCart(product)}
-                                className="mt-2 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-bold py-1 px-2 rounded-lg flex items-center justify-center gap-1 transition-colors"
-                              >
-                                <Plus size={12} strokeWidth={3} /> Agregar
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  ))}
                 </div>
-              </div>
 
-              <form onSubmit={submitOrder} className="space-y-6">
+                {/* Order Notes & Cross-selling */}
+                <div className="space-y-3">
+                  <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
+                    <label className="block text-sm font-bold text-[#1A1A1A] mb-2">¿Falta algo o tienes alguna nota?</label>
+                    <textarea 
+                      placeholder="Ej: Sin cebolla, salsas aparte..." 
+                      value={orderNotes}
+                      onChange={e => setOrderNotes(e.target.value)}
+                      className="w-full p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-[#E3242B] bg-stone-50 min-h-[60px] text-sm mb-3"
+                    />
+                    
+                    {upsellProducts.length > 0 && (
+                      <div>
+                        <button 
+                          type="button"
+                          onClick={() => setIsUpsellOpen(!isUpsellOpen)}
+                          className="w-full flex items-center justify-between p-3 bg-blue-50 text-blue-700 rounded-xl font-bold text-sm border border-blue-100"
+                        >
+                          <span>¿Agregar bebidas o adiciones?</span>
+                          <Plus size={16} className={cn("transition-transform", isUpsellOpen && "rotate-45")} />
+                        </button>
+                        
+                        {isUpsellOpen && (
+                          <div className="mt-3 flex overflow-x-auto gap-3 pb-2 hide-scrollbar">
+                            {upsellProducts.map(product => (
+                              <div key={product.id} className="bg-white rounded-xl p-2 shadow-sm border border-blue-100 min-w-[140px] shrink-0 flex flex-col justify-between">
+                                <div>
+                                  <h5 className="font-bold text-xs text-[#1A1A1A] line-clamp-1">{product.name}</h5>
+                                  <span className="text-[#E3242B] font-bold text-xs">{formatPrice(product.price)}</span>
+                                </div>
+                                <button 
+                                  type="button"
+                                  onClick={() => addToCart(product)}
+                                  className="mt-2 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs font-bold py-1 px-2 rounded-lg flex items-center justify-center gap-1 transition-colors"
+                                >
+                                  <Plus size={12} strokeWidth={3} /> Agregar
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Delivery Type */}
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
                   <h3 className="font-bold text-[#1A1A1A] mb-3 text-lg">¿Cómo quieres tu pedido?</h3>
@@ -766,15 +816,26 @@ export default function Menu() {
                         type="button"
                         onClick={getLocation}
                         className={cn(
-                          "w-full flex items-center justify-center gap-2 p-3 rounded-xl border transition-colors text-sm font-bold",
+                          "w-full flex items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all text-sm font-bold shadow-sm relative overflow-hidden group",
                           location 
-                            ? "bg-green-50 border-green-200 text-green-700" 
-                            : "bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100"
+                            ? "bg-emerald-50 border-emerald-500 text-emerald-700" 
+                            : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:border-amber-400 active:scale-[0.98] ring-2 ring-amber-100 ring-offset-2 animate-pulse"
                         )}
                       >
-                        <MapPin size={18} className={location ? "text-green-600" : "text-stone-400"} />
-                        {isLocating ? "Obteniendo..." : location ? "Ubicación guardada ✓" : "Compartir ubicación GPS"}
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300",
+                          location ? "bg-emerald-100" : "bg-amber-100 group-hover:scale-110"
+                        )}>
+                          <MapPin size={20} className={location ? "text-emerald-600" : "text-amber-600"} />
+                        </div>
+                        <div className="flex flex-col items-start">
+                          <span className="uppercase tracking-tight">{isLocating ? "Obteniendo..." : location ? "Ubicación guardada ✓" : "Compartir ubicación GPS"}</span>
+                          {!location && !isLocating && <span className="text-[10px] font-black uppercase opacity-70 tracking-widest">Toca aquí para habilitar</span>}
+                        </div>
                       </button>
+                      <p className="text-[10px] text-stone-400 text-center px-4">
+                        * El GPS es opcional pero ayuda al repartidor. Funciona en cualquier celular (iPhone/Android) sin necesidad de apps instaladas.
+                      </p>
                       <p className="text-xs text-stone-500 text-center italic">* El costo del domicilio se confirmará por WhatsApp</p>
                     </>
                   )}
@@ -822,45 +883,59 @@ export default function Menu() {
                 </div>
 
                 {/* Loyalty Opt-In */}
-                <div className="bg-gradient-to-r from-stone-900 to-stone-800 p-4 rounded-2xl text-white shadow-lg relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-4 opacity-10"><Gift size={64} /></div>
-                  <h3 className="font-bold text-[#FDE047] mb-1 flex items-center gap-2">
+                <div className="bg-stone-900 p-5 rounded-2xl text-white shadow-xl relative overflow-hidden border border-stone-800">
+                  <div className="absolute -top-4 -right-4 p-4 opacity-10 rotate-12"><Gift size={80} /></div>
+                  <h3 className="font-black text-[#FDE047] mb-1 flex items-center gap-2 uppercase tracking-tight">
                     <Gift size={18} /> Club Bocado Express
                   </h3>
-                  <p className="text-xs text-stone-300 mb-3">Acumula pedidos y gana comida gratis.</p>
+                  <p className="text-xs text-stone-400 mb-3 font-medium">Acumula pedidos y gana comida gratis.</p>
                   
-                  <label className="flex items-start gap-3 cursor-pointer">
+                  {settings.loyaltyMinOrder > 0 && (
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-4">
+                      <p className="text-[10px] text-stone-300 font-bold uppercase tracking-widest leading-relaxed">
+                        ⚠️ Nota: Para recibir un sello, el pedido debe ser mayor a <span className="text-[#FDE047]">{formatPrice(settings.loyaltyMinOrder)}</span>
+                      </p>
+                    </div>
+                  )}
+                  
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <div className={cn(
+                      "mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
+                      loyaltyOptIn ? "bg-[#E3242B] border-[#E3242B]" : "border-stone-700 group-hover:border-stone-500"
+                    )}>
+                      {loyaltyOptIn && <CheckCircle2 size={16} className="text-white" />}
+                    </div>
                     <input 
                       type="checkbox" 
                       checked={loyaltyOptIn}
                       onChange={(e) => setLoyaltyOptIn(e.target.checked)}
-                      className="mt-1 w-5 h-5 rounded border-stone-500 text-[#E3242B] focus:ring-[#E3242B] bg-stone-700"
+                      className="hidden"
                     />
-                    <span className="text-sm font-medium">Sí, quiero unirme gratis usando mi número de WhatsApp.</span>
+                    <span className="text-sm font-bold text-stone-200 leading-tight">Sí, quiero unirme gratis y recibir mi sello.</span>
                   </label>
                 </div>
+              </div>
 
-                {/* Total & Submit */}
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 sticky bottom-0">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-stone-500 font-medium">Subtotal</span>
-                    <span className="text-2xl font-bold text-[#1A1A1A]">{formatPrice(cartTotal)}</span>
-                  </div>
-                  <button 
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full bg-[#E3242B] text-white font-bold text-lg p-4 rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-95 disabled:opacity-70"
-                  >
-                    {isSubmitting ? "Procesando..." : (
-                      <>
-                        <Send size={20} />
-                        Enviar Pedido por WhatsApp
-                      </>
-                    )}
-                  </button>
+              {/* Total & Submit Footer (Sticky) */}
+              <div className="p-4 bg-white border-t border-stone-200 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] sticky bottom-0 z-20">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-stone-500 font-medium">Subtotal</span>
+                  <span className="text-2xl font-bold text-[#1A1A1A]">{formatPrice(cartTotal)}</span>
                 </div>
-              </form>
-            </div>
+                <button 
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-[#E3242B] text-white font-bold text-lg p-4 rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-95 disabled:opacity-70"
+                >
+                  {isSubmitting ? "Procesando..." : (
+                    <>
+                      <Send size={20} />
+                      Enviar Pedido por WhatsApp
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -880,31 +955,82 @@ export default function Menu() {
             
             <div className="p-6">
               {!loyaltyCustomer ? (
-                <form onSubmit={checkLoyalty} className="space-y-4">
-                  <p className="text-sm text-stone-600 text-center mb-4">
-                    Ingresa tu número de WhatsApp para ver tus sellos o unirte al club.
-                  </p>
-                  <input 
-                    type="tel" 
-                    placeholder="Tu número de WhatsApp" 
-                    required
-                    value={loyaltyPhoneInput}
-                    onChange={e => setLoyaltyPhoneInput(e.target.value)}
-                    className="w-full p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-[#1A1A1A] bg-stone-50 text-center text-lg font-bold tracking-widest"
-                  />
-                  <button 
-                    type="submit"
-                    disabled={isCheckingLoyalty}
-                    className="w-full bg-[#1A1A1A] text-[#FDE047] font-bold p-3 rounded-xl transition-transform active:scale-95"
-                  >
-                    {isCheckingLoyalty ? "Buscando..." : "Ver Mis Sellos"}
-                  </button>
-                </form>
+                <div className="space-y-4">
+                  {isNewCustomer ? (
+                    <form onSubmit={registerLoyalty} className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                      <p className="text-sm text-stone-600 text-center mb-4">
+                        ¡Bienvenido! Completa tu registro para empezar a ganar sellos.
+                      </p>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-bold text-stone-500 uppercase mb-1 ml-1">Tu Nombre y Apellido</label>
+                          <input 
+                            type="text" 
+                            placeholder="Ej: Juan Pérez" 
+                            required
+                            value={loyaltyNameInput}
+                            onChange={e => setLoyaltyNameInput(e.target.value)}
+                            className="w-full p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-[#1A1A1A] bg-stone-50 font-medium"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-stone-500 uppercase mb-1 ml-1">WhatsApp</label>
+                          <input 
+                            type="tel" 
+                            readOnly
+                            value={loyaltyPhoneInput}
+                            className="w-full p-3 rounded-xl border border-stone-200 bg-stone-100 text-stone-500 font-bold tracking-widest"
+                          />
+                        </div>
+                      </div>
+                      <button 
+                        type="submit"
+                        disabled={isCheckingLoyalty}
+                        className="w-full bg-[#E3242B] text-white font-bold p-4 rounded-xl transition-transform active:scale-95 shadow-lg shadow-red-200"
+                      >
+                        {isCheckingLoyalty ? "Registrando..." : "Unirme al Club"}
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setIsNewCustomer(false)}
+                        className="w-full text-sm text-stone-400 font-medium"
+                      >
+                        Volver
+                      </button>
+                    </form>
+                  ) : (
+                    <form onSubmit={checkLoyalty} className="space-y-4">
+                      <p className="text-sm text-stone-600 text-center mb-4">
+                        Ingresa tu número de WhatsApp para ver tus sellos o unirte al club.
+                      </p>
+                      <input 
+                        type="tel" 
+                        placeholder="Tu número de WhatsApp" 
+                        required
+                        value={loyaltyPhoneInput}
+                        onChange={e => setLoyaltyPhoneInput(e.target.value)}
+                        className="w-full p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-[#1A1A1A] bg-stone-50 text-center text-lg font-bold tracking-widest"
+                      />
+                      <button 
+                        type="submit"
+                        disabled={isCheckingLoyalty}
+                        className="w-full bg-[#1A1A1A] text-[#FDE047] font-bold p-3 rounded-xl transition-transform active:scale-95"
+                      >
+                        {isCheckingLoyalty ? "Buscando..." : "Ver Mis Sellos"}
+                      </button>
+                    </form>
+                  )}
+                </div>
               ) : (
                 <div className="text-center space-y-6">
                   <div>
-                    <p className="text-sm text-stone-500 font-medium">Hola, {loyaltyCustomer.phone}</p>
+                    <p className="text-sm text-stone-500 font-medium">Hola, <span className="text-[#1A1A1A] font-bold">{loyaltyCustomer.name}</span></p>
                     <h3 className="text-xl font-bold text-[#1A1A1A] mt-1">Llevas {loyaltyCustomer.stamps} de {settings.loyaltyGoal} sellos</h3>
+                    {settings.loyaltyMinOrder > 0 && (
+                      <p className="text-[10px] text-stone-400 mt-1 italic">
+                        * Solo califican pedidos mayores a {formatPrice(settings.loyaltyMinOrder)}
+                      </p>
+                    )}
                   </div>
                   
                   {/* Stamp Cards Visual */}

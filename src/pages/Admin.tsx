@@ -30,6 +30,7 @@ export default function Admin() {
     loyaltyEnabled: true,
     loyaltyPrize: '1 Producto Gratis',
     loyaltyGoal: 5,
+    loyaltyMinOrder: 0,
     referralEnabled: true,
     adminPin: '021403'
   });
@@ -39,8 +40,15 @@ export default function Admin() {
     const unsubSettings = onSnapshot(doc(db, 'settings', 'store'), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data() as StoreSettings;
-        if (!data.adminPin) data.adminPin = '021403'; // Default PIN if not set
-        setSettings(data);
+        setSettings({
+          isStoreOpen: data.isStoreOpen ?? true,
+          loyaltyEnabled: data.loyaltyEnabled ?? true,
+          loyaltyPrize: data.loyaltyPrize ?? '1 Producto Gratis',
+          loyaltyGoal: data.loyaltyGoal ?? 5,
+          loyaltyMinOrder: data.loyaltyMinOrder ?? 0,
+          referralEnabled: data.referralEnabled ?? true,
+          adminPin: data.adminPin ?? '021403'
+        });
       } else {
         // Initialize settings if they don't exist
         setDoc(doc(db, 'settings', 'store'), settings);
@@ -251,75 +259,77 @@ export default function Admin() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-100 flex flex-col md:flex-row">
-      {/* Sidebar */}
-      <aside className="w-full md:w-64 bg-stone-900 text-stone-300 flex flex-col">
-        <div className="p-6 border-b border-stone-800">
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <LayoutDashboard size={20} />
-            Admin Panel
+    <div className="min-h-screen bg-stone-50 flex flex-col md:flex-row font-sans">
+      {/* Sidebar for Desktop */}
+      <aside className="hidden md:flex w-64 bg-white border-r border-stone-200 text-stone-600 flex-col sticky top-0 h-screen">
+        <div className="p-6 border-b border-stone-100">
+          <h1 className="text-xl font-bold text-stone-900 flex items-center gap-2">
+            <div className="w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-white">
+              <LayoutDashboard size={18} />
+            </div>
+            Bocado Admin
           </h1>
         </div>
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           <button 
             onClick={() => setActiveTab('dashboard')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'dashboard' ? 'bg-stone-800 text-white' : 'hover:bg-stone-800/50 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${activeTab === 'dashboard' ? 'bg-stone-900 text-white shadow-lg shadow-stone-200' : 'hover:bg-stone-100 text-stone-500 hover:text-stone-900'}`}
           >
-            <BarChart3 size={20} />
-            Dashboard
+            <BarChart3 size={18} />
+            <span className="font-medium">Dashboard</span>
           </button>
           <button 
             onClick={() => setActiveTab('orders')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'orders' ? 'bg-stone-800 text-white' : 'hover:bg-stone-800/50 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${activeTab === 'orders' ? 'bg-stone-900 text-white shadow-lg shadow-stone-200' : 'hover:bg-stone-100 text-stone-500 hover:text-stone-900'}`}
           >
-            <ListOrdered size={20} />
-            Pedidos
+            <ListOrdered size={18} />
+            <span className="font-medium">Pedidos</span>
             {orders.filter(o => o.status === 'pending').length > 0 && (
-              <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+              <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                 {orders.filter(o => o.status === 'pending').length}
               </span>
             )}
           </button>
           <button 
             onClick={() => setActiveTab('products')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'products' ? 'bg-stone-800 text-white' : 'hover:bg-stone-800/50 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${activeTab === 'products' ? 'bg-stone-900 text-white shadow-lg shadow-stone-200' : 'hover:bg-stone-100 text-stone-500 hover:text-stone-900'}`}
           >
-            <Package size={20} />
-            Productos
+            <Package size={18} />
+            <span className="font-medium">Productos</span>
           </button>
           <button 
             onClick={() => setActiveTab('categories')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'categories' ? 'bg-stone-800 text-white' : 'hover:bg-stone-800/50 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${activeTab === 'categories' ? 'bg-stone-900 text-white shadow-lg shadow-stone-200' : 'hover:bg-stone-100 text-stone-500 hover:text-stone-900'}`}
           >
-            <Settings size={20} />
-            Categorías
+            <Settings size={18} />
+            <span className="font-medium">Categorías</span>
           </button>
           <button 
             onClick={() => setActiveTab('reviews')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'reviews' ? 'bg-stone-800 text-white' : 'hover:bg-stone-800/50 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${activeTab === 'reviews' ? 'bg-stone-900 text-white shadow-lg shadow-stone-200' : 'hover:bg-stone-100 text-stone-500 hover:text-stone-900'}`}
           >
-            <MessageSquare size={20} />
-            Reseñas
+            <MessageSquare size={18} />
+            <span className="font-medium">Reseñas</span>
           </button>
           <button 
             onClick={() => setActiveTab('loyalty')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'loyalty' ? 'bg-stone-800 text-white' : 'hover:bg-stone-800/50 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${activeTab === 'loyalty' ? 'bg-stone-900 text-white shadow-lg shadow-stone-200' : 'hover:bg-stone-100 text-stone-500 hover:text-stone-900'}`}
           >
-            <Gift size={20} />
-            Lealtad y Referidos
+            <Gift size={18} />
+            <span className="font-medium">Lealtad</span>
           </button>
           <button 
             onClick={() => setActiveTab('settings')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'settings' ? 'bg-stone-800 text-white' : 'hover:bg-stone-800/50 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${activeTab === 'settings' ? 'bg-stone-900 text-white shadow-lg shadow-stone-200' : 'hover:bg-stone-100 text-stone-500 hover:text-stone-900'}`}
           >
-            <Settings size={20} />
-            Configuración
+            <Settings size={18} />
+            <span className="font-medium">Ajustes</span>
           </button>
         </nav>
-        <div className="p-4 border-t border-stone-800">
+        <div className="p-4 border-t border-stone-100">
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-stone-800 hover:bg-red-900/50 hover:text-red-400 rounded-lg transition-colors text-sm"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-stone-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 text-sm font-medium"
           >
             <LogOut size={16} />
             Cerrar Sesión
@@ -327,15 +337,77 @@ export default function Admin() {
         </div>
       </aside>
 
+      {/* Mobile Top Header */}
+      <header className="md:hidden bg-white border-b border-stone-200 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
+        <h1 className="text-lg font-bold text-stone-900 flex items-center gap-2">
+          <div className="w-7 h-7 bg-stone-900 rounded-lg flex items-center justify-center text-white">
+            <LayoutDashboard size={16} />
+          </div>
+          Bocado Admin
+        </h1>
+        <button 
+          onClick={handleLogout}
+          className="p-2 text-stone-500 hover:text-red-600 transition-colors"
+        >
+          <LogOut size={20} />
+        </button>
+      </header>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 px-2 py-1 flex justify-around items-center z-50 pb-safe">
+        <button 
+          onClick={() => setActiveTab('dashboard')}
+          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${activeTab === 'dashboard' ? 'text-stone-900' : 'text-stone-400'}`}
+        >
+          <BarChart3 size={20} />
+          <span className="text-[10px] font-medium">Dashboard</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('orders')}
+          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors relative ${activeTab === 'orders' ? 'text-stone-900' : 'text-stone-400'}`}
+        >
+          <ListOrdered size={20} />
+          <span className="text-[10px] font-medium">Pedidos</span>
+          {orders.filter(o => o.status === 'pending').length > 0 && (
+            <span className="absolute top-1 right-1 bg-red-500 text-white text-[8px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+              {orders.filter(o => o.status === 'pending').length}
+            </span>
+          )}
+        </button>
+        <button 
+          onClick={() => setActiveTab('products')}
+          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${activeTab === 'products' ? 'text-stone-900' : 'text-stone-400'}`}
+        >
+          <Package size={20} />
+          <span className="text-[10px] font-medium">Productos</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('loyalty')}
+          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${activeTab === 'loyalty' ? 'text-stone-900' : 'text-stone-400'}`}
+        >
+          <Gift size={20} />
+          <span className="text-[10px] font-medium">Lealtad</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('settings')}
+          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${activeTab === 'settings' ? 'text-stone-900' : 'text-stone-400'}`}
+        >
+          <Settings size={20} />
+          <span className="text-[10px] font-medium">Ajustes</span>
+        </button>
+      </nav>
+
       {/* Main Content */}
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
-        {activeTab === 'dashboard' && <DashboardTab orders={orders} products={products} customers={customers} />}
-        {activeTab === 'orders' && <OrdersTab orders={orders} />}
-        {activeTab === 'products' && <ProductsTab products={products} categories={categories} />}
-        {activeTab === 'categories' && <CategoriesTab categories={categories} />}
-        {activeTab === 'reviews' && <ReviewsTab reviews={reviews} />}
-        {activeTab === 'loyalty' && <LoyaltyTab customers={customers} settings={settings} />}
-        {activeTab === 'settings' && <SettingsTab settings={settings} />}
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto pb-20 md:pb-8">
+        <div className="max-w-6xl mx-auto">
+          {activeTab === 'dashboard' && <DashboardTab orders={orders} products={products} customers={customers} settings={settings} />}
+          {activeTab === 'orders' && <OrdersTab orders={orders} settings={settings} />}
+          {activeTab === 'products' && <ProductsTab products={products} categories={categories} />}
+          {activeTab === 'categories' && <CategoriesTab categories={categories} />}
+          {activeTab === 'reviews' && <ReviewsTab reviews={reviews} />}
+          {activeTab === 'loyalty' && <LoyaltyTab customers={customers} settings={settings} />}
+          {activeTab === 'settings' && <SettingsTab settings={settings} />}
+        </div>
       </main>
     </div>
   );
