@@ -85,7 +85,8 @@ export default function LoyaltyTab({ customers, settings }: LoyaltyTabProps) {
   };
 
   const filteredCustomers = customers.filter(c => 
-    c.phone.includes(searchTerm) || c.name.toLowerCase().includes(searchTerm.toLowerCase())
+    (c.phone && c.phone.includes(searchTerm)) || 
+    (c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -266,7 +267,7 @@ export default function LoyaltyTab({ customers, settings }: LoyaltyTabProps) {
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 font-black text-xs">
-                        {customer.name.charAt(0)}
+                        {customer.name ? customer.name.charAt(0) : '?'}
                       </div>
                       <div>
                         <p className="font-black text-stone-900">{customer.name}</p>

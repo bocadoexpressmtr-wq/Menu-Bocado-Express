@@ -174,7 +174,7 @@ export default function DashboardTab({ orders, products, customers, settings }: 
                 <div key={customer.id} className="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100 hover:bg-white hover:shadow-sm transition-all group">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-stone-400 font-bold border border-stone-100 group-hover:bg-amber-50 group-hover:text-amber-600 transition-colors">
-                      {customer.name.charAt(0)}
+                      {customer.name ? customer.name.charAt(0) : '?'}
                     </div>
                     <div>
                       <p className="font-bold text-stone-900 text-sm">{customer.name}</p>

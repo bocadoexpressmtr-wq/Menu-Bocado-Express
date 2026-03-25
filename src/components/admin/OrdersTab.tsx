@@ -96,7 +96,7 @@ export default function OrdersTab({ orders, settings }: { orders: Order[], setti
                     "w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-sm",
                     order.status === 'completed' ? 'bg-stone-100 text-stone-400' : 'bg-stone-900 text-white'
                   )}>
-                    {order.customerName.charAt(0)}
+                    {order.customerName ? order.customerName.charAt(0) : '?'}
                   </div>
                   <div>
                     <div className="flex flex-wrap items-center gap-2 mb-1">

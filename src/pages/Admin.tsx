@@ -113,7 +113,8 @@ export default function Admin() {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      if (result.user.email === 'bocadoexpress@gmail.com') {
+      const allowedEmails = ['bocadoexpress.mtr@gmail.com'];
+      if (allowedEmails.includes(result.user.email || '')) {
         setIsAuthenticated(true);
       } else {
         alert("Este correo no tiene permisos de administrador.");
@@ -400,6 +401,26 @@ export default function Admin() {
       {/* Main Content */}
       <main className="flex-1 p-4 md:p-8 overflow-y-auto pb-20 md:pb-8">
         <div className="max-w-6xl mx-auto">
+          {!auth.currentUser && (
+            <div className="mb-6 bg-amber-50 border border-amber-200 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3 text-amber-800">
+                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                  <BarChart3 size={20} />
+                </div>
+                <div>
+                  <p className="font-bold text-sm">Acceso Limitado</p>
+                  <p className="text-xs opacity-80">Para ver pedidos y gestionar datos sensibles, debes vincular tu cuenta de Google.</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleGoogleLogin}
+                className="whitespace-nowrap bg-white border border-amber-200 text-amber-800 px-4 py-2 rounded-xl text-xs font-bold hover:bg-amber-100 transition-colors flex items-center gap-2"
+              >
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" />
+                Vincular Google
+              </button>
+            </div>
+          )}
           {activeTab === 'dashboard' && <DashboardTab orders={orders} products={products} customers={customers} settings={settings} />}
           {activeTab === 'orders' && <OrdersTab orders={orders} settings={settings} />}
           {activeTab === 'products' && <ProductsTab products={products} categories={categories} />}

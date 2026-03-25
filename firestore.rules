@@ -14,8 +14,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && (
         // Check if the user's email matches the initial admin email
-        (request.auth.token.email == "enamoradooluis@gmail.com" && request.auth.token.email_verified == true) ||
-        (request.auth.token.email == "bocadoexpress@gmail.com" && request.auth.token.email_verified == true) ||
+        (request.auth.token.email == "bocadoexpress.mtr@gmail.com" && request.auth.token.email_verified == true) ||
         // Or if they have an admin record in the users collection
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
