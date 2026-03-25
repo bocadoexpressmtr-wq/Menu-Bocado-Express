@@ -56,9 +56,6 @@ export default function Admin() {
           referralEnabled: data.referralEnabled ?? true,
           adminPin: data.adminPin ?? '021403'
         });
-      } else {
-        // Initialize settings if they don't exist
-        setDoc(doc(db, 'settings', 'store'), settings);
       }
       setLoading(false);
     });
@@ -69,6 +66,16 @@ export default function Admin() {
   useEffect(() => {
     const isGoogleAdmin = user?.email === 'bocadoexpress.mtr@gmail.com';
     if (!isAuthenticated || !isGoogleAdmin) return;
+
+    // Initialize settings if they don't exist once we are admin
+    const initSettings = async () => {
+      const docRef = doc(db, 'settings', 'store');
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        await setDoc(docRef, settings);
+      }
+    };
+    initSettings();
 
     const unsubOrders = onSnapshot(query(collection(db, 'orders'), orderBy('createdAt', 'desc')), (snapshot) => {
       const newOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
