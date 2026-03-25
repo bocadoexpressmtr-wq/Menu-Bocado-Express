@@ -1,0 +1,172 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && (
+        // Check if the user's email matches the initial admin email
+        (request.auth.token.email == "enamoradooluis@gmail.com" && request.auth.token.email_verified == true) ||
+        (request.auth.token.email == "bocadoexpress@gmail.com" && request.auth.token.email_verified == true) ||
+        // Or if they have an admin record in the users collection
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    function validStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+    
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    
+    function isValidCategory() {
+      return hasRequiredFields(['name', 'order']) &&
+             validStringLength('name', 1, 50) &&
+             request.resource.data.order is number;
+    }
+    
+    function isValidProduct() {
+      return hasRequiredFields(['name', 'price', 'categoryId', 'isAvailable']) &&
+             validStringLength('name', 1, 100) &&
+             request.resource.data.price is number &&
+             request.resource.data.price >= 0 &&
+             validStringLength('categoryId', 1, 100) &&
+             request.resource.data.isAvailable is bool &&
+             (!('description' in request.resource.data) || validStringLength('description', 0, 500)) &&
+             (!('imageUrl' in request.resource.data) || validStringLength('imageUrl', 0, 1000)) &&
+             (!('isPopular' in request.resource.data) || request.resource.data.isPopular is bool) &&
+             (!('isDailyOffer' in request.resource.data) || request.resource.data.isDailyOffer is bool) &&
+             (!('isUpsell' in request.resource.data) || request.resource.data.isUpsell is bool) &&
+             (!('tags' in request.resource.data) || (request.resource.data.tags is list && request.resource.data.tags.size() <= 10));
+    }
+    
+    function isValidOrder() {
+      return hasRequiredFields(['customerName', 'customerPhone', 'deliveryType', 'paymentMethod', 'items', 'totalAmount', 'status', 'createdAt']) &&
+             validStringLength('customerName', 1, 100) &&
+             validStringLength('customerPhone', 1, 20) &&
+             request.resource.data.deliveryType in ['domicilio', 'recoger', 'local'] &&
+             request.resource.data.paymentMethod in ['nequi', 'efectivo'] &&
+             request.resource.data.items is list &&
+             request.resource.data.items.size() > 0 &&
+             request.resource.data.items.size() <= 50 &&
+             request.resource.data.totalAmount is number &&
+             request.resource.data.totalAmount >= 0 &&
+             request.resource.data.status in ['pending', 'confirmed', 'preparing', 'delivering', 'completed', 'cancelled'] &&
+             (!('customerAddress' in request.resource.data) || validStringLength('customerAddress', 0, 200)) &&
+             (!('cashAmount' in request.resource.data) || request.resource.data.cashAmount is number) &&
+             (!('loyaltyOptIn' in request.resource.data) || request.resource.data.loyaltyOptIn is bool) &&
+             (!('pointsGranted' in request.resource.data) || request.resource.data.pointsGranted is bool);
+    }
+    
+    function isValidUser() {
+      return hasRequiredFields(['email', 'role']) &&
+             validStringLength('email', 5, 100) &&
+             request.resource.data.role == 'admin';
+    }
+
+    function isValidSettings() {
+      return hasRequiredFields(['isStoreOpen', 'loyaltyPrize', 'loyaltyGoal', 'referralEnabled', 'loyaltyEnabled']) &&
+             request.resource.data.isStoreOpen is bool &&
+             validStringLength('loyaltyPrize', 1, 100) &&
+             request.resource.data.loyaltyGoal is number &&
+             request.resource.data.loyaltyGoal > 0 &&
+             request.resource.data.referralEnabled is bool &&
+             request.resource.data.loyaltyEnabled is bool;
+    }
+
+    function isValidCustomer() {
+      return hasRequiredFields(['phone', 'stamps', 'createdAt']) &&
+             validStringLength('phone', 1, 20) &&
+             request.resource.data.stamps is number &&
+             request.resource.data.stamps >= 0 &&
+             (!('referredBy' in request.resource.data) || validStringLength('referredBy', 0, 20));
+    }
+
+    function isValidReview() {
+      return hasRequiredFields(['customerName', 'text', 'rating', 'isVisible', 'createdAt']) &&
+             validStringLength('customerName', 1, 100) &&
+             validStringLength('text', 1, 1000) &&
+             request.resource.data.rating is number &&
+             request.resource.data.rating >= 1 &&
+             request.resource.data.rating <= 5 &&
+             request.resource.data.isVisible is bool;
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // Categories: Anyone can read, only admins can write
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidCategory();
+      allow update: if isAdmin() && isValidCategory();
+      allow delete: if isAdmin();
+    }
+
+    // Products: Anyone can read, only admins can write
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidProduct();
+      allow update: if isAdmin() && isValidProduct();
+      allow delete: if isAdmin();
+    }
+
+    // Reviews: Anyone can read, only admins can write
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidReview();
+      allow delete: if isAdmin();
+    }
+
+    // Orders: Anyone can create (customers placing orders), only admins can read, update, delete
+    match /orders/{orderId} {
+      // Allow customers to create an order. We enforce status='pending' on creation.
+      allow create: if isValidOrder() && request.resource.data.status == 'pending';
+      // Only admins can read all orders, update status, or delete
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Users: Only admins can read and write
+    match /users/{userId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && isValidUser();
+      allow delete: if isAdmin();
+    }
+
+    // Settings: Anyone can read, only admins can write
+    match /settings/{settingId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidSettings();
+      allow delete: if isAdmin();
+    }
+
+    // Customers: Anyone can read (to check stamps by phone), only admins can write (to grant stamps)
+    // We allow customers to create their own record when they opt-in
+    match /customers/{customerId} {
+      allow read: if true;
+      // Allow customers to create their own record with 0 stamps
+      allow create: if isValidCustomer() && request.resource.data.stamps == 0;
+      // Only admins can update (grant stamps) or delete
+      allow update: if isAdmin() && isValidCustomer();
+      allow delete: if isAdmin();
+    }
+  }
+}
