@@ -13,7 +13,8 @@ export default function CouponsTab() {
     discountType: 'percentage',
     discountValue: 0,
     minOrderValue: 0,
-    isActive: true
+    isActive: true,
+    expiryDate: ''
   });
 
   useEffect(() => {
@@ -75,12 +76,16 @@ export default function CouponsTab() {
       discountType: 'percentage',
       discountValue: 0,
       minOrderValue: 0,
-      isActive: true
+      isActive: true,
+      expiryDate: ''
     });
   };
 
   const editCoupon = (coupon: Coupon) => {
-    setFormData(coupon);
+    setFormData({
+      ...coupon,
+      expiryDate: coupon.expiryDate || ''
+    });
     setEditingId(coupon.id!);
     setIsAdding(true);
     document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -164,6 +169,16 @@ export default function CouponsTab() {
                   className="w-full p-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Fecha de Vencimiento (Opcional)</label>
+                <input
+                  type="date"
+                  value={formData.expiryDate || ''}
+                  onChange={e => setFormData({...formData, expiryDate: e.target.value})}
+                  className="w-full p-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none"
+                />
+              </div>
             </div>
 
             <div className="flex items-center gap-2 mt-4">
@@ -206,6 +221,7 @@ export default function CouponsTab() {
                 <th className="p-4 font-semibold text-stone-600">Código</th>
                 <th className="p-4 font-semibold text-stone-600">Descuento</th>
                 <th className="p-4 font-semibold text-stone-600">Compra Mín.</th>
+                <th className="p-4 font-semibold text-stone-600">Vence</th>
                 <th className="p-4 font-semibold text-stone-600">Estado</th>
                 <th className="p-4 font-semibold text-stone-600 text-right">Acciones</th>
               </tr>
@@ -224,6 +240,9 @@ export default function CouponsTab() {
                   </td>
                   <td className="p-4 text-stone-600">
                     ${coupon.minOrderValue.toLocaleString()}
+                  </td>
+                  <td className="p-4 text-stone-600 text-xs">
+                    {coupon.expiryDate ? new Date(coupon.expiryDate).toLocaleDateString() : 'Nunca'}
                   </td>
                   <td className="p-4">
                     <button

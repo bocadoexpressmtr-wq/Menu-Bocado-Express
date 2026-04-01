@@ -82,6 +82,7 @@ export interface Coupon {
   discountValue: number;
   minOrderValue: number;
   isActive: boolean;
+  expiryDate?: string;
 }
 
 export interface Customer {

@@ -45,6 +45,7 @@ export default function Menu() {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponError, setCouponError] = useState('');
+  const [hasActiveCoupons, setHasActiveCoupons] = useState(false);
 
   // Loyalty Modal State
   const [isLoyaltyModalOpen, setIsLoyaltyModalOpen] = useState(false);
@@ -129,6 +130,22 @@ export default function Menu() {
         setSettings(docSnap.data() as StoreSettings);
       }
     }, (error) => console.error("Error fetching settings", error));
+
+    const checkCoupons = async () => {
+      try {
+        const q = query(collection(db, 'coupons'), where('isActive', '==', true));
+        const snap = await getDocs(q);
+        const now = new Date().toISOString();
+        const active = snap.docs.some(doc => {
+          const data = doc.data() as Coupon;
+          return !data.expiryDate || data.expiryDate > now;
+        });
+        setHasActiveCoupons(active);
+      } catch (error) {
+        console.error("Error checking active coupons", error);
+      }
+    };
+    checkCoupons();
 
     return () => {
       unsubSettings();
@@ -219,6 +236,14 @@ export default function Menu() {
         return;
       }
       const coupon = { id: snap.docs[0].id, ...snap.docs[0].data() } as Coupon;
+      
+      // Check expiry date
+      if (coupon.expiryDate && coupon.expiryDate < new Date().toISOString()) {
+        if (!codeToApply) setCouponError('El cupón ha expirado');
+        setAppliedCoupon(null);
+        return;
+      }
+
       if (Math.round(cartSubtotal) < coupon.minOrderValue) {
         if (!codeToApply) setCouponError(`Mínimo de compra: $${coupon.minOrderValue.toLocaleString()}`);
         setAppliedCoupon(null);
@@ -1046,46 +1071,17 @@ export default function Menu() {
                   )}
                 </div>
 
-                {/* Loyalty Opt-In */}
-                <div className="bg-stone-900 p-5 rounded-2xl text-white shadow-xl relative overflow-hidden border border-stone-800">
-                  <div className="absolute -top-4 -right-4 p-4 opacity-10 rotate-12"><Gift size={80} /></div>
-                  <h3 className="font-black text-[#FDE047] mb-1 flex items-center gap-2 uppercase tracking-tight">
-                    <Gift size={18} /> Club Bocado Express
-                  </h3>
-                  <p className="text-xs text-stone-400 mb-3 font-medium">Acumula pedidos y gana comida gratis.</p>
-                  
-                  {settings.loyaltyMinOrder > 0 && (
-                    <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-4">
-                      <p className="text-[10px] text-stone-300 font-bold uppercase tracking-widest leading-relaxed">
-                        ⚠️ Nota: Para recibir un sello, el pedido debe ser mayor a <span className="text-[#FDE047]">{formatPrice(settings.loyaltyMinOrder)}</span>
-                      </p>
-                    </div>
-                  )}
-                  
-                  <label className="flex items-start gap-3 cursor-pointer group">
-                    <div className={cn(
-                      "mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
-                      loyaltyOptIn ? "bg-[#E3242B] border-[#E3242B]" : "border-stone-700 group-hover:border-stone-500"
-                    )}>
-                      {loyaltyOptIn && <CheckCircle2 size={16} className="text-white" />}
-                    </div>
-                    <input 
-                      type="checkbox" 
-                      checked={loyaltyOptIn}
-                      onChange={(e) => setLoyaltyOptIn(e.target.checked)}
-                      className="hidden"
-                    />
-                    <span className="text-sm font-bold text-stone-200 leading-tight">Sí, quiero unirme gratis y recibir mi sello.</span>
-                  </label>
-                </div>
-
                 {/* Coupon Section */}
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
                   <h3 className="font-bold text-[#1A1A1A] mb-3 text-sm flex items-center gap-2">
                     <Gift size={16} className="text-[#E3242B]" /> ¿Tienes un cupón de descuento?
                   </h3>
                   
-                  {appliedCoupon ? (
+                  {!hasActiveCoupons && !appliedCoupon ? (
+                    <div className="bg-stone-50 border border-stone-200 rounded-xl p-3">
+                      <p className="text-xs text-stone-500 font-medium">No hay cupones activos en este momento.</p>
+                    </div>
+                  ) : appliedCoupon ? (
                     <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center justify-between">
                       <div>
                         <p className="text-sm font-bold text-green-700 flex items-center gap-1">
@@ -1126,6 +1122,39 @@ export default function Menu() {
                   {couponError && (
                     <p className="text-xs text-red-500 mt-2 font-medium">{couponError}</p>
                   )}
+                </div>
+
+                {/* Loyalty Opt-In */}
+                <div className="bg-stone-900 p-5 rounded-2xl text-white shadow-xl relative overflow-hidden border border-stone-800">
+                  <div className="absolute -top-4 -right-4 p-4 opacity-10 rotate-12"><Gift size={80} /></div>
+                  <h3 className="font-black text-[#FDE047] mb-1 flex items-center gap-2 uppercase tracking-tight">
+                    <Gift size={18} /> Club Bocado Express
+                  </h3>
+                  <p className="text-xs text-stone-400 mb-3 font-medium">Acumula pedidos y gana comida gratis.</p>
+                  
+                  {settings.loyaltyMinOrder > 0 && (
+                    <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-4">
+                      <p className="text-[10px] text-stone-300 font-bold uppercase tracking-widest leading-relaxed">
+                        ⚠️ Nota: Para recibir un sello, el pedido debe ser mayor a <span className="text-[#FDE047]">{formatPrice(settings.loyaltyMinOrder)}</span>
+                      </p>
+                    </div>
+                  )}
+                  
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <div className={cn(
+                      "mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
+                      loyaltyOptIn ? "bg-[#E3242B] border-[#E3242B]" : "border-stone-700 group-hover:border-stone-500"
+                    )}>
+                      {loyaltyOptIn && <CheckCircle2 size={16} className="text-white" />}
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={loyaltyOptIn}
+                      onChange={(e) => setLoyaltyOptIn(e.target.checked)}
+                      className="hidden"
+                    />
+                    <span className="text-sm font-bold text-stone-200 leading-tight">Sí, quiero unirme gratis y recibir mi sello.</span>
+                  </label>
                 </div>
               </div>
 
