@@ -30,6 +30,9 @@ export default function LoyaltyTab({ settings }: LoyaltyTabProps) {
     const unsub = onSnapshot(query(collection(db, 'customers'), orderBy('createdAt', 'desc'), limit(1000)), (snapshot) => {
       setCustomers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer)));
       setLoading(false);
+    }, (err) => {
+      console.error("Loyalty Customers Error:", err);
+      setLoading(false);
     });
     return () => unsub();
   }, []);
@@ -90,8 +93,10 @@ export default function LoyaltyTab({ settings }: LoyaltyTabProps) {
     if (!window.confirm("¿Estás seguro de que deseas eliminar este cliente? Se perderán todos sus sellos.")) return;
     try {
       await deleteDoc(doc(db, 'customers', customerId));
+      alert("Cliente eliminado");
     } catch (error) {
       console.error("Error deleting customer:", error);
+      alert("Error al eliminar el cliente: Permiso denegado");
     }
   };
 

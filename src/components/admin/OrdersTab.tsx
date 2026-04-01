@@ -18,13 +18,15 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
     return () => unsub();
   }, []);
 
+  const [showArchived, setShowArchived] = useState(false);
+  const [confirmingOrder, setConfirmingOrder] = useState<string | null>(null);
+
   if (loading && orders.length === 0) return <div className="p-8 text-center text-stone-500 font-medium">Cargando pedidos...</div>;
 
   const handleComplete = async (order: Order) => {
-    if (!window.confirm(`¿Marcar el pedido de ${order.customerName} como entregado?`)) return;
-
     try {
       await updateDoc(doc(db, 'orders', order.id!), { status: 'completed' });
+      setConfirmingOrder(null);
 
       // Auto-stamp and Referral logic
       if (order.customerPhone) {
@@ -72,18 +74,21 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
     if (!window.confirm("¿Estás seguro de que deseas eliminar este pedido definitivamente?")) return;
     try {
       await deleteDoc(doc(db, 'orders', orderId));
+      alert("Pedido eliminado");
     } catch (error) {
       console.error("Error deleting order", error);
-      alert("Error al eliminar el pedido");
+      alert("Error al eliminar el pedido: Permiso denegado o error de red.");
     }
   };
 
-  const handleArchive = async (orderId: string) => {
+  const handleArchive = async (orderId: string, currentStatus: string) => {
     try {
-      await updateDoc(doc(db, 'orders', orderId), { status: 'archived' });
+      const newStatus = currentStatus === 'archived' ? 'completed' : 'archived';
+      await updateDoc(doc(db, 'orders', orderId), { status: newStatus });
+      alert(newStatus === 'archived' ? "Pedido archivado" : "Pedido desarchivado");
     } catch (error) {
       console.error("Error archiving order", error);
-      alert("Error al archivar el pedido");
+      alert("Error al procesar el archivo");
     }
   };
 
@@ -139,16 +144,30 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
     }).format(price);
   };
 
-  const visibleOrders = orders.filter(o => o.status !== 'archived');
+  const visibleOrders = orders.filter(o => showArchived ? o.status === 'archived' : o.status !== 'archived');
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-black text-stone-900 tracking-tight">Gestión de Pedidos</h2>
-          <p className="text-stone-500 text-sm">Administra y despacha las órdenes de tus clientes</p>
+          <h2 className="text-3xl font-black text-stone-900 tracking-tight">
+            {showArchived ? 'Pedidos Archivados' : 'Gestión de Pedidos'}
+          </h2>
+          <p className="text-stone-500 text-sm">
+            {showArchived ? 'Historial de pedidos guardados' : 'Administra y despacha las órdenes de tus clientes'}
+          </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button 
+            onClick={() => setShowArchived(!showArchived)}
+            className={cn(
+              "px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2",
+              showArchived ? "bg-stone-900 text-white" : "bg-white border border-stone-200 text-stone-600 hover:bg-stone-50"
+            )}
+          >
+            <Archive size={14} />
+            {showArchived ? 'Ver Activos' : 'Ver Archivados'}
+          </button>
           {selectedOrders.length > 0 && (
             <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4">
               <button 
@@ -184,62 +203,61 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 gap-4 md:gap-6">
         {visibleOrders.length === 0 ? (
-          <div className="bg-white rounded-[2rem] border border-stone-100 p-12 text-center">
-            <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center text-stone-200 mx-auto mb-4">
-              <ShoppingBag size={32} />
+          <div className="bg-white rounded-2xl border border-stone-100 p-8 md:p-12 text-center">
+            <div className="w-12 h-12 md:w-16 md:h-16 bg-stone-50 rounded-full flex items-center justify-center text-stone-200 mx-auto mb-4">
+              <ShoppingBag size={24} />
             </div>
-            <p className="text-stone-400 font-medium">No hay pedidos pendientes o activos.</p>
+            <p className="text-stone-400 font-medium text-sm">No hay pedidos pendientes o activos.</p>
           </div>
         ) : (
           visibleOrders.map(order => (
             <div key={order.id} className={cn(
-              "bg-white rounded-[2rem] shadow-sm border transition-all duration-300 overflow-hidden group relative",
-              order.status === 'completed' ? 'border-stone-100 opacity-75 grayscale-[0.5]' : 'border-stone-200 hover:shadow-xl hover:shadow-stone-200/50',
+              "bg-white rounded-2xl shadow-sm border transition-all duration-300 overflow-hidden group relative",
+              order.status === 'completed' ? 'border-stone-100 opacity-75 grayscale-[0.5]' : 'border-stone-200 hover:shadow-lg hover:shadow-stone-200/30',
               selectedOrders.includes(order.id!) && 'ring-2 ring-stone-900 border-transparent'
             )}>
               {/* Selection Checkbox */}
               <button 
                 onClick={() => toggleSelect(order.id!)}
-                className="absolute top-6 left-6 z-10 p-1 bg-white rounded-lg shadow-sm border border-stone-100 text-stone-400 hover:text-stone-900 transition-colors"
+                className="absolute top-4 left-4 z-10 p-1 bg-white rounded-lg shadow-sm border border-stone-100 text-stone-400 hover:text-stone-900 transition-colors"
               >
-                {selectedOrders.includes(order.id!) ? <CheckSquare size={20} className="text-stone-900" /> : <Square size={20} />}
+                {selectedOrders.includes(order.id!) ? <CheckSquare size={16} className="text-stone-900" /> : <Square size={16} />}
               </button>
 
               {/* Card Header */}
-              <div className="p-6 md:p-8 pl-16 md:pl-20 border-b border-stone-50 flex flex-col md:flex-row justify-between gap-6">
-                <div className="flex items-start gap-4">
+              <div className="p-4 md:p-6 pl-12 md:pl-16 border-b border-stone-50 flex flex-col md:flex-row justify-between gap-4">
+                <div className="flex items-start gap-3">
                   <div className={cn(
-                    "w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-sm",
+                    "w-10 h-10 rounded-xl flex items-center justify-center font-black text-base shadow-sm shrink-0",
                     order.status === 'completed' ? 'bg-stone-100 text-stone-400' : 'bg-stone-900 text-white'
                   )}>
                     {order.customerName ? order.customerName.charAt(0) : '?'}
                   </div>
                   <div>
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <h3 className="font-black text-xl text-stone-900">{order.customerName}</h3>
+                    <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                      <h3 className="font-black text-base md:text-lg text-stone-900 leading-tight">{order.customerName}</h3>
                       <span className={cn(
-                        "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border",
+                        "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1 border",
                         order.status === 'completed' 
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                           : 'bg-amber-50 text-amber-700 border-amber-100 animate-pulse'
                       )}>
-                        {order.status === 'completed' ? <CheckCircle size={10} /> : <Clock size={10} />}
+                        {order.status === 'completed' ? <CheckCircle size={8} /> : <Clock size={8} />}
                         {order.status === 'completed' ? 'Entregado' : 'Pendiente'}
                       </span>
                     </div>
-                    <p className="text-stone-400 text-xs font-medium flex items-center gap-2">
+                    <p className="text-stone-400 text-[10px] md:text-xs font-medium flex items-center gap-1.5">
                       <a 
                         href={`https://wa.me/${order.customerPhone.replace(/\D/g, '')}`} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="text-stone-900 font-bold hover:text-emerald-600 transition-colors flex items-center gap-1"
-                        title="Contactar por WhatsApp"
                       >
                         {order.customerPhone}
                       </a>
-                      <span className="w-1 h-1 bg-stone-200 rounded-full" />
+                      <span className="w-0.5 h-0.5 bg-stone-200 rounded-full" />
                       {new Date(order.createdAt).toLocaleString('es-CO', { 
                         day: '2-digit', 
                         month: 'short', 
@@ -250,29 +268,51 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 self-end md:self-center">
+                <div className="flex items-center gap-2 self-end md:self-center">
                   {order.status === 'pending' && (
-                    <button 
-                      onClick={() => handleComplete(order)}
-                      className="bg-emerald-500 text-white px-6 py-3 rounded-2xl text-sm font-black hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 flex items-center gap-2 active:scale-95"
-                    >
-                      <CheckCircle size={18} />
-                      Completar
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {confirmingOrder === order.id ? (
+                        <div className="flex items-center gap-1 animate-in zoom-in-95 duration-200">
+                          <button 
+                            onClick={() => handleComplete(order)}
+                            className="bg-emerald-600 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-700 transition-all shadow-md"
+                          >
+                            Confirmar
+                          </button>
+                          <button 
+                            onClick={() => setConfirmingOrder(null)}
+                            className="bg-stone-100 text-stone-600 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-stone-200 transition-all"
+                          >
+                            No
+                          </button>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => setConfirmingOrder(order.id!)}
+                          className="bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-emerald-600 transition-all shadow-md shadow-emerald-100 flex items-center gap-1.5 active:scale-95"
+                        >
+                          <CheckCircle size={14} />
+                          Completar
+                        </button>
+                      )}
+                    </div>
                   )}
                   <button 
-                    onClick={() => handleArchive(order.id!)}
-                    className="p-3 text-stone-300 hover:text-stone-600 hover:bg-stone-50 rounded-2xl transition-all active:scale-95"
-                    title="Archivar pedido"
+                    onClick={() => handleArchive(order.id!, order.status)}
+                    className={cn(
+                      "p-2 rounded-xl transition-all active:scale-95",
+                      order.status === 'archived' ? "text-emerald-600 bg-emerald-50" : "text-stone-300 hover:text-stone-600 hover:bg-stone-50"
+                    )}
+                    title={order.status === 'archived' ? "Desarchivar" : "Archivar"}
                   >
-                    <Archive size={20} />
+                    <Archive size={18} />
                   </button>
                   <button 
                     onClick={() => handleDelete(order.id!)}
-                    className="p-3 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all active:scale-95"
-                    title="Eliminar pedido"
+                    className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all active:scale-95"
+                    title="Eliminar"
                   >
-                    <Trash2 size={20} />
+                    <Trash2 size={18} />
                   </button>
                 </div>
               </div>
@@ -280,23 +320,23 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
               {/* Card Body */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
                 {/* Items List */}
-                <div className="lg:col-span-7 p-6 md:p-8 border-b lg:border-b-0 lg:border-r border-stone-50">
-                  <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] mb-4">Detalle del Pedido</h4>
-                  <div className="space-y-4">
+                <div className="lg:col-span-7 p-4 md:p-6 border-b lg:border-b-0 lg:border-r border-stone-50">
+                  <h4 className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em] mb-3">Detalle</h4>
+                  <div className="space-y-2.5">
                     {order.items.map((item: any, i: number) => (
                       <div key={i} className="flex items-center justify-between group/item">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-stone-50 rounded-lg flex items-center justify-center text-stone-400 font-black text-xs group-hover/item:bg-stone-900 group-hover/item:text-white transition-colors">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-stone-50 rounded-lg flex items-center justify-center text-stone-400 font-black text-[10px] group-hover/item:bg-stone-900 group-hover/item:text-white transition-colors">
                             {item.quantity}
                           </div>
-                          <span className="font-bold text-stone-700">{item.name}</span>
+                          <span className="font-bold text-stone-700 text-sm">{item.name}</span>
                         </div>
-                        <span className="text-stone-400 font-medium">{formatPrice(item.price * item.quantity)}</span>
+                        <span className="text-stone-400 font-medium text-xs">{formatPrice(item.price * item.quantity)}</span>
                       </div>
                     ))}
                   </div>
                   
-                  <div className="mt-8 pt-6 border-t border-stone-50 flex justify-between items-end">
+                  <div className="mt-4 pt-4 border-t border-stone-50 flex justify-between items-end">
                     <div>
                       <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">Total a cobrar</p>
                       <p className="text-3xl font-black text-stone-900">{formatPrice(order.totalAmount)}</p>

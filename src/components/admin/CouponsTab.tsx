@@ -21,6 +21,8 @@ export default function CouponsTab() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const newCoupons = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Coupon));
       setCoupons(newCoupons);
+    }, (err) => {
+      console.error("Coupons Error:", err);
     });
     return () => unsubscribe();
   }, []);
@@ -46,13 +48,13 @@ export default function CouponsTab() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('¿Estás seguro de eliminar este cupón?')) {
-      try {
-        await deleteDoc(doc(db, 'coupons', id));
-      } catch (error) {
-        console.error("Error deleting coupon:", error);
-        alert("Error al eliminar el cupón");
-      }
+    if (!window.confirm("¿Seguro que deseas eliminar este cupón?")) return;
+    try {
+      await deleteDoc(doc(db, 'coupons', id));
+      alert("Cupón eliminado");
+    } catch (error) {
+      console.error("Error deleting coupon", error);
+      alert("Error al eliminar el cupón: Permiso denegado");
     }
   };
 

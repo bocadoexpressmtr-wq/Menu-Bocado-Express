@@ -1,5 +1,5 @@
 {
-  "name": "Menú y Pedidos - Comida Rápida",
+  "name": "Bocado Express_Menu",
   "description": "Plataforma de pedidos con menú digital, integración con WhatsApp y panel de administración.",
   "requestFramePermissions": [
     "geolocation"
