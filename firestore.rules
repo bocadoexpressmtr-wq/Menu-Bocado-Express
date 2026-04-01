@@ -13,8 +13,8 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() && (
-        // Case-insensitive email check and removing strict email_verified for troubleshooting
-        request.auth.token.email.matches("(?i)bocadoexpress\\.mtr@gmail\\.com") ||
+        // Case-insensitive email check for authorized admins
+        request.auth.token.email.matches("(?i)(bocadoexpress\\.mtr|enamoradooluis)@gmail\\.com") ||
         // Or if they have an admin record in the users collection
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
@@ -67,11 +67,13 @@ service cloud.firestore {
              request.resource.data.items.size() <= 50 &&
              request.resource.data.totalAmount is number &&
              request.resource.data.totalAmount >= 0 &&
-             request.resource.data.status in ['pending', 'confirmed', 'preparing', 'delivering', 'completed', 'cancelled'] &&
+             request.resource.data.status in ['pending', 'confirmed', 'preparing', 'delivering', 'completed', 'cancelled', 'archived'] &&
              (!('customerAddress' in request.resource.data) || validStringLength('customerAddress', 0, 200)) &&
              (!('cashAmount' in request.resource.data) || request.resource.data.cashAmount is number) &&
              (!('loyaltyOptIn' in request.resource.data) || request.resource.data.loyaltyOptIn is bool) &&
-             (!('pointsGranted' in request.resource.data) || request.resource.data.pointsGranted is bool);
+             (!('pointsGranted' in request.resource.data) || request.resource.data.pointsGranted is bool) &&
+             (!('referredBy' in request.resource.data) || (request.resource.data.referredBy == null || validStringLength('referredBy', 1, 20))) &&
+             (!('notes' in request.resource.data) || validStringLength('notes', 0, 500));
     }
     
     function isValidUser() {
@@ -97,7 +99,9 @@ service cloud.firestore {
              validStringLength('name', 1, 100) &&
              request.resource.data.stamps is number &&
              request.resource.data.stamps >= 0 &&
-             (!('referredBy' in request.resource.data) || validStringLength('referredBy', 0, 20));
+             (!('referredBy' in request.resource.data) || (request.resource.data.referredBy == null || validStringLength('referredBy', 1, 20))) &&
+             (!('lastUsedAddress' in request.resource.data) || validStringLength('lastUsedAddress', 0, 200)) &&
+             (!('totalOrders' in request.resource.data) || request.resource.data.totalOrders is number);
     }
 
     function isValidReview() {
@@ -163,10 +167,14 @@ service cloud.firestore {
     // We allow customers to create their own record when they opt-in
     match /customers/{customerId} {
       allow read: if true;
-      // Allow customers to create their own record with 0 stamps
+      // Allow customers to create their own record when they join
       allow create: if isValidCustomer() && request.resource.data.stamps == 0;
-      // Only admins can update (grant stamps) or delete
-      allow update: if isAdmin() && isValidCustomer();
+      // Allow customers to update their own name/address, but NOT stamps or totalOrders
+      // Only admins can grant stamps or change order counts
+      allow update: if (isAdmin() && isValidCustomer()) || 
+                      (isValidCustomer() && 
+                       request.resource.data.stamps == resource.data.stamps &&
+                       (!('totalOrders' in request.resource.data) || request.resource.data.totalOrders == resource.data.totalOrders));
       allow delete: if isAdmin();
     }
   }

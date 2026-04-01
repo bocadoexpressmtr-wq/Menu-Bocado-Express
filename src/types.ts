@@ -35,6 +35,7 @@ export interface Order {
   cashAmount?: number;
   loyaltyOptIn?: boolean;
   pointsGranted?: boolean;
+  referredBy?: string | null;
   location?: { lat: number; lng: number } | null;
   items: {
     productId: string;
@@ -43,7 +44,7 @@ export interface Order {
     price: number;
   }[];
   totalAmount: number;
-  status: 'pending' | 'completed';
+  status: 'pending' | 'confirmed' | 'preparing' | 'delivering' | 'completed' | 'cancelled' | 'archived';
   createdAt: string;
   notes?: string;
 }
@@ -57,24 +58,40 @@ export interface SocialLink {
 
 export interface StoreSettings {
   isStoreOpen: boolean;
+  storeStatusMode?: 'manual' | 'auto';
+  autoOpenTime?: string;
+  autoCloseTime?: string;
   loyaltyEnabled: boolean;
   loyaltyPrize: string;
   loyaltyGoal: number;
   loyaltyMinOrder: number;
   referralEnabled: boolean;
   adminPin?: string;
+  whatsappNumber?: string;
+  nequiNumber?: string;
   whatsappMessageHeader?: string;
   whatsappMessageFooter?: string;
   shareText?: string;
   socialLinks?: SocialLink[];
 }
 
+export interface Coupon {
+  id?: string;
+  code: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  minOrderValue: number;
+  isActive: boolean;
+}
+
 export interface Customer {
   id?: string;
   phone: string;
   name: string;
+  lastUsedAddress?: string;
   stamps: number;
   referredBy?: string;
+  totalOrders?: number;
   createdAt: string;
 }
 

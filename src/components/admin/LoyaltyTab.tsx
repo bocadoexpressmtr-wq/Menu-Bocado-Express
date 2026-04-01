@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, collection, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { cn } from '../../lib/utils';
 import { Customer, StoreSettings } from '../../types';
 import { Gift, Users, Search, Plus, Minus, Trash2, ToggleLeft, ToggleRight, Save, Loader2, Trophy, Star, UserPlus, CheckCircle } from 'lucide-react';
 
 interface LoyaltyTabProps {
-  customers: Customer[];
   settings: StoreSettings;
 }
 
-export default function LoyaltyTab({ customers, settings }: LoyaltyTabProps) {
+export default function LoyaltyTab({ settings }: LoyaltyTabProps) {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   const [loyaltyPrize, setLoyaltyPrize] = useState(settings.loyaltyPrize);
@@ -24,6 +25,16 @@ export default function LoyaltyTab({ customers, settings }: LoyaltyTabProps) {
     setLoyaltyGoal(settings.loyaltyGoal);
     setLoyaltyMinOrder(settings.loyaltyMinOrder || 0);
   }, [settings]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(query(collection(db, 'customers'), orderBy('createdAt', 'desc'), limit(1000)), (snapshot) => {
+      setCustomers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer)));
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  if (loading && customers.length === 0) return <div className="p-8 text-center text-stone-500 font-medium">Cargando datos de lealtad...</div>;
 
   const toggleLoyalty = async () => {
     try {

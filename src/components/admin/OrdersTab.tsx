@@ -1,42 +1,66 @@
-import React from 'react';
-import { MapPin, CheckCircle, Trash2, Clock, ShoppingBag, Trophy, MessageSquare, Bike, Store, Wallet } from 'lucide-react';
-import { updateDoc, doc, deleteDoc, collection, query, where, getDocs, addDoc, increment } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { MapPin, CheckCircle, Trash2, Clock, ShoppingBag, Trophy, MessageSquare, Bike, Store, Wallet, Archive, CheckSquare, Square } from 'lucide-react';
+import { updateDoc, doc, getDoc, deleteDoc, collection, query, where, getDocs, addDoc, increment, writeBatch, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Order, StoreSettings } from '../../types';
 import { cn } from '../../lib/utils';
 
-export default function OrdersTab({ orders, settings }: { orders: Order[], settings: StoreSettings }) {
+export default function OrdersTab({ settings }: { settings: StoreSettings }) {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(500)), (snapshot) => {
+      setOrders(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)));
+      setLoading(false);
+    }, (err) => console.error(err));
+    return () => unsub();
+  }, []);
+
+  if (loading && orders.length === 0) return <div className="p-8 text-center text-stone-500 font-medium">Cargando pedidos...</div>;
+
   const handleComplete = async (order: Order) => {
     if (!window.confirm(`¿Marcar el pedido de ${order.customerName} como entregado?`)) return;
 
     try {
       await updateDoc(doc(db, 'orders', order.id!), { status: 'completed' });
 
-      // Auto-stamp logic
-      if (order.loyaltyOptIn && order.customerPhone) {
-        // Check minimum order requirement
-        if (order.totalAmount < (settings.loyaltyMinOrder || 0)) {
-          alert(`Pedido marcado como entregado. No se asignó sello porque el total (${formatPrice(order.totalAmount)}) es menor al mínimo requerido (${formatPrice(settings.loyaltyMinOrder || 0)}).`);
-          return;
+      // Auto-stamp and Referral logic
+      if (order.customerPhone) {
+        const customerDocRef = doc(db, 'customers', order.customerPhone);
+        const customerSnap = await getDoc(customerDocRef);
+        
+        const minOrder = settings.loyaltyMinOrder || 0;
+        const meetsMinOrder = order.totalAmount >= minOrder;
+
+        if (customerSnap.exists()) {
+          const updateData: any = {
+            totalOrders: increment(1)
+          };
+          
+          if (meetsMinOrder && order.loyaltyOptIn) {
+            updateData.stamps = increment(1);
+          }
+          
+          await updateDoc(customerDocRef, updateData);
         }
 
-        const q = query(collection(db, 'customers'), where('phone', '==', order.customerPhone));
-        const snap = await getDocs(q);
-        
-        if (!snap.empty) {
-          const customerDoc = snap.docs[0];
-          await updateDoc(doc(db, 'customers', customerDoc.id), { stamps: increment(1) });
-        } else {
-          await addDoc(collection(db, 'customers'), { 
-            phone: order.customerPhone, 
-            name: order.customerName,
-            stamps: 1, 
-            createdAt: new Date().toISOString() 
-          });
+        // Referral logic: Only if the order meets the minimum amount
+        if (meetsMinOrder && order.referredBy && order.referredBy !== order.customerPhone) {
+          const referrerDocRef = doc(db, 'customers', order.referredBy);
+          const referrerSnap = await getDoc(referrerDocRef);
+          if (referrerSnap.exists()) {
+            await updateDoc(referrerDocRef, { stamps: increment(1) });
+            console.log(`Referral stamp awarded to ${order.referredBy}`);
+          }
         }
-        alert("Pedido marcado como entregado y sello asignado al cliente.");
-      } else {
-        alert("Pedido marcado como entregado.");
+
+        if (!meetsMinOrder && order.loyaltyOptIn) {
+          alert(`Pedido completado. No se asignó sello porque el total (${formatPrice(order.totalAmount)}) es menor al mínimo (${formatPrice(minOrder)}).`);
+        } else {
+          alert("Pedido completado con éxito.");
+        }
       }
     } catch (error) {
       console.error("Error updating order", error);
@@ -45,12 +69,65 @@ export default function OrdersTab({ orders, settings }: { orders: Order[], setti
   };
 
   const handleDelete = async (orderId: string) => {
-    if (!window.confirm("¿Estás seguro de que deseas eliminar este pedido del historial?")) return;
+    if (!window.confirm("¿Estás seguro de que deseas eliminar este pedido definitivamente?")) return;
     try {
       await deleteDoc(doc(db, 'orders', orderId));
     } catch (error) {
       console.error("Error deleting order", error);
       alert("Error al eliminar el pedido");
+    }
+  };
+
+  const handleArchive = async (orderId: string) => {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), { status: 'archived' });
+    } catch (error) {
+      console.error("Error archiving order", error);
+      alert("Error al archivar el pedido");
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedOrders(prev => 
+      prev.includes(id) ? prev.filter(oid => oid !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrders.length === orders.length) {
+      setSelectedOrders([]);
+    } else {
+      setSelectedOrders(orders.map(o => o.id!));
+    }
+  };
+
+  const bulkDelete = async () => {
+    if (!window.confirm(`¿Eliminar definitivamente los ${selectedOrders.length} pedidos seleccionados?`)) return;
+    const batch = writeBatch(db);
+    selectedOrders.forEach(id => {
+      batch.delete(doc(db, 'orders', id));
+    });
+    try {
+      await batch.commit();
+      setSelectedOrders([]);
+      alert("Pedidos eliminados");
+    } catch (error) {
+      console.error("Bulk delete error", error);
+    }
+  };
+
+  const bulkArchive = async () => {
+    if (!window.confirm(`¿Archivar los ${selectedOrders.length} pedidos seleccionados?`)) return;
+    const batch = writeBatch(db);
+    selectedOrders.forEach(id => {
+      batch.update(doc(db, 'orders', id), { status: 'archived' });
+    });
+    try {
+      await batch.commit();
+      setSelectedOrders([]);
+      alert("Pedidos archivados");
+    } catch (error) {
+      console.error("Bulk archive error", error);
     }
   };
 
@@ -62,6 +139,8 @@ export default function OrdersTab({ orders, settings }: { orders: Order[], setti
     }).format(price);
   };
 
+  const visibleOrders = orders.filter(o => o.status !== 'archived');
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -69,28 +148,67 @@ export default function OrdersTab({ orders, settings }: { orders: Order[], setti
           <h2 className="text-3xl font-black text-stone-900 tracking-tight">Gestión de Pedidos</h2>
           <p className="text-stone-500 text-sm">Administra y despacha las órdenes de tus clientes</p>
         </div>
-        <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border border-stone-200 shadow-sm">
-          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-          <span className="text-xs font-bold text-stone-600 uppercase tracking-wider">En Vivo</span>
+        <div className="flex items-center gap-3">
+          {selectedOrders.length > 0 && (
+            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4">
+              <button 
+                onClick={bulkArchive}
+                className="bg-stone-100 text-stone-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-stone-200 transition-colors flex items-center gap-2"
+              >
+                <Archive size={14} /> Archivar ({selectedOrders.length})
+              </button>
+              <button 
+                onClick={bulkDelete}
+                className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors flex items-center gap-2"
+              >
+                <Trash2 size={14} /> Eliminar ({selectedOrders.length})
+              </button>
+            </div>
+          )}
+          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border border-stone-200 shadow-sm">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-xs font-bold text-stone-600 uppercase tracking-wider">En Vivo</span>
+          </div>
         </div>
       </div>
 
+      {visibleOrders.length > 0 && (
+        <div className="flex items-center gap-4 px-4">
+          <button 
+            onClick={toggleSelectAll}
+            className="flex items-center gap-2 text-xs font-bold text-stone-500 hover:text-stone-900 transition-colors"
+          >
+            {selectedOrders.length === visibleOrders.length ? <CheckSquare size={18} className="text-stone-900" /> : <Square size={18} />}
+            {selectedOrders.length === visibleOrders.length ? 'Deseleccionar Todo' : 'Seleccionar Todo'}
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-6">
-        {orders.length === 0 ? (
+        {visibleOrders.length === 0 ? (
           <div className="bg-white rounded-[2rem] border border-stone-100 p-12 text-center">
             <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center text-stone-200 mx-auto mb-4">
               <ShoppingBag size={32} />
             </div>
-            <p className="text-stone-400 font-medium">No hay pedidos registrados aún.</p>
+            <p className="text-stone-400 font-medium">No hay pedidos pendientes o activos.</p>
           </div>
         ) : (
-          orders.map(order => (
+          visibleOrders.map(order => (
             <div key={order.id} className={cn(
-              "bg-white rounded-[2rem] shadow-sm border transition-all duration-300 overflow-hidden group",
-              order.status === 'completed' ? 'border-stone-100 opacity-75 grayscale-[0.5]' : 'border-stone-200 hover:shadow-xl hover:shadow-stone-200/50'
+              "bg-white rounded-[2rem] shadow-sm border transition-all duration-300 overflow-hidden group relative",
+              order.status === 'completed' ? 'border-stone-100 opacity-75 grayscale-[0.5]' : 'border-stone-200 hover:shadow-xl hover:shadow-stone-200/50',
+              selectedOrders.includes(order.id!) && 'ring-2 ring-stone-900 border-transparent'
             )}>
+              {/* Selection Checkbox */}
+              <button 
+                onClick={() => toggleSelect(order.id!)}
+                className="absolute top-6 left-6 z-10 p-1 bg-white rounded-lg shadow-sm border border-stone-100 text-stone-400 hover:text-stone-900 transition-colors"
+              >
+                {selectedOrders.includes(order.id!) ? <CheckSquare size={20} className="text-stone-900" /> : <Square size={20} />}
+              </button>
+
               {/* Card Header */}
-              <div className="p-6 md:p-8 border-b border-stone-50 flex flex-col md:flex-row justify-between gap-6">
+              <div className="p-6 md:p-8 pl-16 md:pl-20 border-b border-stone-50 flex flex-col md:flex-row justify-between gap-6">
                 <div className="flex items-start gap-4">
                   <div className={cn(
                     "w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-sm",
@@ -112,7 +230,15 @@ export default function OrdersTab({ orders, settings }: { orders: Order[], setti
                       </span>
                     </div>
                     <p className="text-stone-400 text-xs font-medium flex items-center gap-2">
-                      <span className="text-stone-900 font-bold">{order.customerPhone}</span>
+                      <a 
+                        href={`https://wa.me/${order.customerPhone.replace(/\D/g, '')}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-stone-900 font-bold hover:text-emerald-600 transition-colors flex items-center gap-1"
+                        title="Contactar por WhatsApp"
+                      >
+                        {order.customerPhone}
+                      </a>
                       <span className="w-1 h-1 bg-stone-200 rounded-full" />
                       {new Date(order.createdAt).toLocaleString('es-CO', { 
                         day: '2-digit', 
@@ -134,6 +260,13 @@ export default function OrdersTab({ orders, settings }: { orders: Order[], setti
                       Completar
                     </button>
                   )}
+                  <button 
+                    onClick={() => handleArchive(order.id!)}
+                    className="p-3 text-stone-300 hover:text-stone-600 hover:bg-stone-50 rounded-2xl transition-all active:scale-95"
+                    title="Archivar pedido"
+                  >
+                    <Archive size={20} />
+                  </button>
                   <button 
                     onClick={() => handleDelete(order.id!)}
                     className="p-3 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all active:scale-95"

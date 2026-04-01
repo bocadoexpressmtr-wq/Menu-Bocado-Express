@@ -1,11 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, Save, Star } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Review } from '../../types';
 
-export default function ReviewsTab({ reviews }: { reviews: Review[] }) {
+export default function ReviewsTab() {
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingReview, setEditingReview] = useState<Partial<Review> | null>(null);
+
+  useEffect(() => {
+    const unsub = onSnapshot(query(collection(db, 'reviews'), orderBy('createdAt', 'desc'), limit(500)), (snapshot) => {
+      setReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review)));
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  if (loading && reviews.length === 0) return <div className="p-8 text-center text-stone-500 font-medium">Cargando reseñas...</div>;
   const [isAdding, setIsAdding] = useState(false);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -54,7 +66,7 @@ export default function ReviewsTab({ reviews }: { reviews: Review[] }) {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-stone-900">Reseñas</h2>
-        <button onClick={() => { setIsAdding(true); setEditingReview({ rating: 5, isVisible: true }); }} className="bg-stone-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-stone-800 text-sm font-medium shadow-sm">
+        <button onClick={() => { setIsAdding(true); setEditingReview({ rating: 5, isVisible: true }); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="bg-stone-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-stone-800 text-sm font-medium shadow-sm">
           <Plus size={16} /> Nueva Reseña
         </button>
       </div>
@@ -124,7 +136,7 @@ export default function ReviewsTab({ reviews }: { reviews: Review[] }) {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button onClick={() => { setIsAdding(false); setEditingReview(review); }} className="text-stone-400 hover:text-blue-600 p-1"><Edit2 size={16} /></button>
+                  <button onClick={() => { setIsAdding(false); setEditingReview(review); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-stone-400 hover:text-blue-600 p-1"><Edit2 size={16} /></button>
                   <button onClick={() => handleDelete(review.id!)} className="text-stone-400 hover:text-red-600 p-1 ml-2"><Trash2 size={16} /></button>
                 </td>
               </tr>

@@ -104,6 +104,10 @@
           "type": "boolean",
           "description": "Whether points have been granted for this order"
         },
+        "referredBy": {
+          "type": "string",
+          "description": "Phone number of the referrer"
+        },
         "items": {
           "type": "array",
           "items": {
@@ -124,13 +128,17 @@
         },
         "status": {
           "type": "string",
-          "enum": ["pending", "confirmed", "preparing", "delivering", "completed", "cancelled"],
+          "enum": ["pending", "confirmed", "preparing", "delivering", "completed", "cancelled", "archived"],
           "description": "Status of the order"
         },
         "createdAt": {
           "type": "string",
           "format": "date-time",
           "description": "When the order was created"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Order notes"
         }
       },
       "required": ["customerName", "customerPhone", "deliveryType", "paymentMethod", "items", "totalAmount", "status", "createdAt"]
@@ -186,6 +194,14 @@
           "type": "string",
           "description": "Phone number (used as ID)"
         },
+        "name": {
+          "type": "string",
+          "description": "Name of the customer"
+        },
+        "lastUsedAddress": {
+          "type": "string",
+          "description": "Last delivery address used"
+        },
         "stamps": {
           "type": "number",
           "description": "Number of accumulated stamps"
@@ -194,13 +210,17 @@
           "type": "string",
           "description": "Phone number of the referrer"
         },
+        "totalOrders": {
+          "type": "number",
+          "description": "Total number of completed orders"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",
           "description": "When the customer joined"
         }
       },
-      "required": ["phone", "stamps", "createdAt"]
+      "required": ["phone", "name", "stamps", "createdAt"]
     },
     "Review": {
       "title": "Review",

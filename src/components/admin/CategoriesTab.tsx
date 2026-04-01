@@ -1,11 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, Save } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Category } from '../../types';
 
-export default function CategoriesTab({ categories }: { categories: Category[] }) {
+export default function CategoriesTab() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingCategory, setEditingCategory] = useState<Partial<Category> | null>(null);
+
+  useEffect(() => {
+    const unsub = onSnapshot(query(collection(db, 'categories'), orderBy('order')), (snapshot) => {
+      setCategories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  if (loading && categories.length === 0) return <div className="p-8 text-center text-stone-500 font-medium">Cargando categorías...</div>;
   const [isAdding, setIsAdding] = useState(false);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -49,7 +61,7 @@ export default function CategoriesTab({ categories }: { categories: Category[] }
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-stone-900">Categorías</h2>
-        <button onClick={() => { setIsAdding(true); setEditingCategory({ order: categories.length + 1 }); }} className="bg-stone-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-stone-800 text-sm font-medium shadow-sm">
+        <button onClick={() => { setIsAdding(true); setEditingCategory({ order: categories.length + 1 }); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="bg-stone-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-stone-800 text-sm font-medium shadow-sm">
           <Plus size={16} /> Nueva Categoría
         </button>
       </div>
@@ -95,7 +107,7 @@ export default function CategoriesTab({ categories }: { categories: Category[] }
                 <td className="px-6 py-4 text-stone-500">{category.order}</td>
                 <td className="px-6 py-4 font-medium text-stone-900">{category.name}</td>
                 <td className="px-6 py-4 text-right">
-                  <button onClick={() => { setIsAdding(false); setEditingCategory(category); }} className="text-stone-400 hover:text-blue-600 p-1"><Edit2 size={16} /></button>
+                  <button onClick={() => { setIsAdding(false); setEditingCategory(category); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-stone-400 hover:text-blue-600 p-1"><Edit2 size={16} /></button>
                   <button onClick={() => handleDelete(category.id)} className="text-stone-400 hover:text-red-600 p-1 ml-2"><Trash2 size={16} /></button>
                 </td>
               </tr>

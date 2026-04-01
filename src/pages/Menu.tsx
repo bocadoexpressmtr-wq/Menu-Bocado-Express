@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, onSnapshot, query, orderBy, addDoc, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, addDoc, doc, getDoc, setDoc, getDocs, where, limit } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ShoppingCart, MapPin, Send, Plus, Minus, Trash2, CheckCircle2, Instagram, Facebook, Music2, Gift, Info, X, Store, Bike, UtensilsCrossed, Wallet, Banknote, PartyPopper, Star, Share2, Globe, MessageCircle, Youtube, Twitter } from 'lucide-react';
+import { ShoppingCart, MapPin, Send, Plus, Minus, Trash2, CheckCircle2, Instagram, Facebook, Music2, Gift, Info, X, Store, Bike, UtensilsCrossed, Wallet, Banknote, PartyPopper, Star, Share2, Globe, MessageCircle, Youtube, Twitter, Tag } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { Product, Category, CartItem, DeliveryType, PaymentMethod, StoreSettings, Customer, Review } from '../types';
+import { Product, Category, CartItem, DeliveryType, PaymentMethod, StoreSettings, Customer, Review, Coupon } from '../types';
 
 export default function Menu() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -25,8 +25,12 @@ export default function Menu() {
   const [customerName, setCustomerName] = useState(() => {
     return localStorage.getItem('lastCustomerName') || '';
   });
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('');
+  const [customerPhone, setCustomerPhone] = useState(() => {
+    return localStorage.getItem('lastCustomerPhone') || '';
+  });
+  const [customerAddress, setCustomerAddress] = useState(() => {
+    return localStorage.getItem('lastCustomerAddress') || '';
+  });
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
   const [loyaltyOptIn, setLoyaltyOptIn] = useState(() => {
     return localStorage.getItem('lastLoyaltyOptIn') === 'true';
@@ -36,6 +40,11 @@ export default function Menu() {
   const [orderSuccess, setOrderSuccess] = useState(() => {
     return localStorage.getItem('orderSuccess') === 'true';
   });
+
+  // Coupons State
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [couponError, setCouponError] = useState('');
 
   // Loyalty Modal State
   const [isLoyaltyModalOpen, setIsLoyaltyModalOpen] = useState(false);
@@ -53,6 +62,7 @@ export default function Menu() {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [isUpsellOpen, setIsUpsellOpen] = useState(false);
   const [orderNotes, setOrderNotes] = useState('');
+  const [referredBy, setReferredBy] = useState<string | null>(null);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-CO', {
@@ -63,19 +73,56 @@ export default function Menu() {
   };
 
   useEffect(() => {
-    const qProducts = query(collection(db, 'products'));
-    const unsubProducts = onSnapshot(qProducts, (snapshot) => {
-      const prods: Product[] = [];
-      snapshot.forEach((doc) => prods.push({ id: doc.id, ...doc.data() } as Product));
-      setProducts(prods);
-    }, (error) => console.error("Error fetching products", error));
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      setReferredBy(ref);
+      // Optional: Store in localStorage so it persists across reloads
+      localStorage.setItem('bocado_ref', ref);
+    } else {
+      const storedRef = localStorage.getItem('bocado_ref');
+      if (storedRef) setReferredBy(storedRef);
+    }
 
-    const qCategories = query(collection(db, 'categories'), orderBy('order'));
-    const unsubCategories = onSnapshot(qCategories, (snapshot) => {
-      const cats: Category[] = [];
-      snapshot.forEach((doc) => cats.push({ id: doc.id, ...doc.data() } as Category));
-      setCategories(cats);
-    }, (error) => console.error("Error fetching categories", error));
+    const fetchStaticData = async () => {
+      const cachedData = sessionStorage.getItem('bocado_menu_data');
+      const cacheTime = sessionStorage.getItem('bocado_menu_time');
+      
+      // 15 minutes cache
+      if (cachedData && cacheTime && (Date.now() - parseInt(cacheTime) < 1000 * 60 * 15)) {
+        try {
+          const { p, c, r } = JSON.parse(cachedData);
+          setProducts(p); setCategories(c); setReviews(r);
+          return;
+        } catch (e) {
+          console.error("Cache parsing error", e);
+        }
+      }
+
+      try {
+        const [pSnap, cSnap, rSnap] = await Promise.all([
+          getDocs(query(collection(db, 'products'))),
+          getDocs(query(collection(db, 'categories'), orderBy('order'))),
+          getDocs(query(collection(db, 'reviews'), orderBy('createdAt', 'desc'), limit(50)))
+        ]);
+
+        const p = pSnap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+        const c = cSnap.docs.map(d => ({ id: d.id, ...d.data() } as Category));
+        const r = rSnap.docs.map(d => {
+          const data = d.data() as Review;
+          return { id: d.id, ...data };
+        }).filter(rev => rev.isVisible);
+
+        setProducts(p); setCategories(c); setReviews(r);
+        
+        sessionStorage.setItem('bocado_menu_data', JSON.stringify({ p, c, r }));
+        sessionStorage.setItem('bocado_menu_time', Date.now().toString());
+      } catch (error) {
+        console.error("Error fetching static data", error);
+      }
+    };
+
+    fetchStaticData();
 
     const unsubSettings = onSnapshot(doc(db, 'settings', 'store'), (docSnap) => {
       if (docSnap.exists()) {
@@ -83,30 +130,35 @@ export default function Menu() {
       }
     }, (error) => console.error("Error fetching settings", error));
 
-    const qReviews = query(collection(db, 'reviews'), orderBy('createdAt', 'desc'));
-    const unsubReviews = onSnapshot(qReviews, (snapshot) => {
-      const revs: Review[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data() as Review;
-        if (data.isVisible) {
-          revs.push({ id: doc.id, ...data });
-        }
-      });
-      setReviews(revs);
-    }, (error) => console.error("Error fetching reviews", error));
-
     return () => {
-      unsubProducts();
-      unsubCategories();
       unsubSettings();
-      unsubReviews();
     };
   }, []);
 
-  // Scroll Spy Effect removed for independent category navigation
+  const isCurrentlyOpen = () => {
+    if (settings.storeStatusMode === 'auto' && settings.autoOpenTime && settings.autoCloseTime) {
+      // Use Colombia timezone for accurate store hours regardless of user's location
+      const now = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Bogota"}));
+      const currentTime = now.getHours() * 60 + now.getMinutes();
+      const [openH, openM] = settings.autoOpenTime.split(':').map(Number);
+      const [closeH, closeM] = settings.autoCloseTime.split(':').map(Number);
+      const openTime = openH * 60 + openM;
+      const closeTime = closeH * 60 + closeM;
+
+      if (closeTime < openTime) {
+        // Crosses midnight (e.g., 18:00 to 02:00)
+        return currentTime >= openTime || currentTime <= closeTime;
+      } else {
+        return currentTime >= openTime && currentTime <= closeTime;
+      }
+    }
+    return settings.isStoreOpen;
+  };
+
+  const isStoreOpen = isCurrentlyOpen();
 
   const addToCart = (product: Product) => {
-    if (!settings.isStoreOpen) return;
+    if (!isStoreOpen) return;
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -146,8 +198,51 @@ export default function Menu() {
     }).filter(item => item.quantity > 0));
   };
 
-  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const cartSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const discountAmount = appliedCoupon 
+    ? (appliedCoupon.discountType === 'percentage' 
+        ? cartSubtotal * (appliedCoupon.discountValue / 100) 
+        : appliedCoupon.discountValue)
+    : 0;
+  const cartTotal = Math.max(0, cartSubtotal - discountAmount);
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    try {
+      const q = query(collection(db, 'coupons'), where('code', '==', couponCode.toUpperCase().trim()), where('isActive', '==', true));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        setCouponError('Cupón no válido o inactivo');
+        setAppliedCoupon(null);
+        return;
+      }
+      const coupon = { id: snap.docs[0].id, ...snap.docs[0].data() } as Coupon;
+      if (cartSubtotal < coupon.minOrderValue) {
+        setCouponError(`Mínimo de compra: $${coupon.minOrderValue.toLocaleString()}`);
+        setAppliedCoupon(null);
+        return;
+      }
+      setAppliedCoupon(coupon);
+      setCouponError('');
+    } catch (error) {
+      console.error("Error applying coupon", error);
+      setCouponError('Error al validar el cupón');
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponError('');
+  };
+
+  useEffect(() => {
+    if (appliedCoupon && cartSubtotal < appliedCoupon.minOrderValue) {
+      removeCoupon();
+      setCouponError(`El cupón fue removido porque el mínimo de compra es $${appliedCoupon.minOrderValue.toLocaleString()}`);
+    }
+  }, [cartSubtotal, appliedCoupon]);
 
   const getLocation = () => {
     setIsLocating(true);
@@ -236,22 +331,38 @@ export default function Menu() {
       const confirmNoGPS = window.confirm("📍 No has compartido tu ubicación GPS. ¿Deseas continuar solo con la dirección escrita? (El GPS ayuda al repartidor a llegar más rápido)");
       if (!confirmNoGPS) return;
     }
-    if (paymentMethod === 'efectivo' && !cashAmount) return alert("Por favor indica con cuánto vas a pagar");
+    if (paymentMethod === 'efectivo') {
+      if (!cashAmount) return alert("Por favor indica con cuánto vas a pagar");
+      if (parseFloat(cashAmount) < cartTotal) return alert(`El monto a pagar debe ser mayor o igual al total del pedido (${formatPrice(cartTotal)})`);
+    }
 
     setIsSubmitting(true);
     try {
-      // If they opted in, ensure they have a customer record
-      if (loyaltyOptIn) {
-        const docRef = doc(db, 'customers', customerPhone);
-        const docSnap = await getDoc(docRef);
-        if (!docSnap.exists()) {
-          await setDoc(docRef, {
-            phone: customerPhone,
-            name: customerName,
-            stamps: 0,
-            createdAt: new Date().toISOString()
-          });
+      // Manage Customer Profile (The "Cerebro")
+      const customerDocRef = doc(db, 'customers', customerPhone);
+      const customerSnap = await getDoc(customerDocRef);
+      const isActuallyNew = !customerSnap.exists();
+
+      if (isActuallyNew) {
+        // Create new customer profile
+        await setDoc(customerDocRef, {
+          phone: customerPhone,
+          name: customerName,
+          lastUsedAddress: deliveryType === 'domicilio' ? customerAddress : '',
+          stamps: 0,
+          totalOrders: 0,
+          referredBy: referredBy || null,
+          createdAt: new Date().toISOString()
+        });
+      } else {
+        // Update existing customer profile (Option A: Update last address)
+        const updateData: any = {
+          name: customerName,
+        };
+        if (deliveryType === 'domicilio') {
+          updateData.lastUsedAddress = customerAddress;
         }
+        await setDoc(customerDocRef, updateData, { merge: true });
       }
 
       const orderData = {
@@ -263,6 +374,7 @@ export default function Menu() {
         cashAmount: paymentMethod === 'efectivo' ? parseFloat(cashAmount) : 0,
         loyaltyOptIn,
         pointsGranted: false,
+        referredBy: isActuallyNew ? referredBy : null, // Only award referral if they are truly new
         location: deliveryType === 'domicilio' ? location : null,
         items: cart.map(item => ({
           productId: item.id,
@@ -270,6 +382,9 @@ export default function Menu() {
           quantity: item.quantity,
           price: item.price
         })),
+        subtotal: cartSubtotal,
+        discountAmount: discountAmount,
+        couponCode: appliedCoupon?.code || null,
         totalAmount: cartTotal,
         status: 'pending',
         createdAt: new Date().toISOString(),
@@ -305,6 +420,12 @@ export default function Menu() {
       cart.forEach(item => {
         message += `- ${item.quantity}x ${item.name} (${formatPrice(item.price * item.quantity)})\n`;
       });
+      
+      if (appliedCoupon) {
+        message += `\n🏷️ *Cupón Aplicado:* ${appliedCoupon.code}\n`;
+        message += `➖ *Descuento:* -${formatPrice(discountAmount)}\n`;
+      }
+      
       message += `\n✨ *Total a pagar:* ${formatPrice(cartTotal)}\n`;
       if (deliveryType === 'domicilio') {
         message += `*(El costo del domicilio se confirmará por este medio)*\n`;
@@ -316,15 +437,17 @@ export default function Menu() {
 
       message += `\n${settings.whatsappMessageFooter || 'Vengo de Menú Digital Bocado Express'}`;
 
-      const whatsappUrl = `https://wa.me/573144052399?text=${encodeURIComponent(message)}`;
+      const targetNumber = (settings.whatsappNumber || '573144052399').replace(/\D/g, '');
+      const whatsappUrl = `https://wa.me/${targetNumber}?text=${encodeURIComponent(message)}`;
       
       // Use window.location.href for better compatibility with iOS Safari
-      // Safari often blocks window.open in async contexts
       window.location.href = whatsappUrl;
 
-      // Persist success state
+      // Persist success state and customer data
       localStorage.setItem('orderSuccess', 'true');
       localStorage.setItem('lastCustomerName', customerName);
+      localStorage.setItem('lastCustomerPhone', customerPhone);
+      localStorage.setItem('lastCustomerAddress', customerAddress);
       localStorage.setItem('lastLoyaltyOptIn', String(loyaltyOptIn));
 
       setOrderSuccess(true);
@@ -560,7 +683,7 @@ export default function Menu() {
       </div>
 
       {/* Store Closed Banner */}
-      {!settings.isStoreOpen && (
+      {!isStoreOpen && (
         <div className="bg-stone-800 text-white text-center py-3 px-4 sticky top-[125px] z-20 text-sm font-medium flex items-center justify-center gap-2">
           <span>😴</span> En este momento estamos cerrados, pero échale un ojo a nuestro menú para ir antojándote.
         </div>
@@ -600,7 +723,7 @@ export default function Menu() {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {dailyOffers.map(product => (
-                    <ProductCard key={product.id} product={product} addToCart={addToCart} isStoreOpen={settings.isStoreOpen} />
+                    <ProductCard key={product.id} product={product} addToCart={addToCart} isStoreOpen={isStoreOpen} />
                   ))}
                 </div>
               </section>
@@ -614,7 +737,7 @@ export default function Menu() {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {popularProducts.map(product => (
-                    <ProductCard key={product.id} product={product} addToCart={addToCart} isStoreOpen={settings.isStoreOpen} />
+                    <ProductCard key={product.id} product={product} addToCart={addToCart} isStoreOpen={isStoreOpen} />
                   ))}
                 </div>
               </section>
@@ -624,7 +747,7 @@ export default function Menu() {
             {categories.map(category => {
               if (activeCategory !== 'todos' && activeCategory !== category.id) return null;
               
-              const categoryProducts = products.filter(p => p.categoryId === category.id && p.isAvailable && !p.isPopular && !p.isDailyOffer);
+              const categoryProducts = products.filter(p => p.categoryId === category.id && p.isAvailable);
               if (categoryProducts.length === 0) return null;
 
               return (
@@ -634,7 +757,7 @@ export default function Menu() {
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {categoryProducts.map(product => (
-                      <ProductCard key={product.id} product={product} addToCart={addToCart} isStoreOpen={settings.isStoreOpen} />
+                      <ProductCard key={product.id} product={product} addToCart={addToCart} isStoreOpen={isStoreOpen} />
                     ))}
                   </div>
                 </section>
@@ -688,7 +811,7 @@ export default function Menu() {
       </footer>
 
       {/* Floating Cart Button */}
-      {cart.length > 0 && settings.isStoreOpen && (
+      {cart.length > 0 && isStoreOpen && (
         <div className="fixed bottom-6 left-0 right-0 px-4 z-40 animate-in slide-in-from-bottom-10">
           <div className="max-w-md mx-auto">
             <button 
@@ -882,7 +1005,7 @@ export default function Menu() {
                   {paymentMethod === 'nequi' && (
                     <div className="bg-[#FDE047]/20 p-3 rounded-xl text-center border border-[#FDE047]">
                       <p className="text-xs text-stone-600 mb-1">Transfiere a este número:</p>
-                      <p className="font-bold text-lg tracking-widest text-[#1A1A1A]">3124726152</p>
+                      <p className="font-bold text-lg tracking-widest text-[#1A1A1A]">{settings.nequiNumber || '3124726152'}</p>
                     </div>
                   )}
 
@@ -938,13 +1061,71 @@ export default function Menu() {
                     <span className="text-sm font-bold text-stone-200 leading-tight">Sí, quiero unirme gratis y recibir mi sello.</span>
                   </label>
                 </div>
+
+                {/* Coupon Section */}
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
+                  <h3 className="font-bold text-[#1A1A1A] mb-3 text-sm flex items-center gap-2">
+                    <Gift size={16} className="text-[#E3242B]" /> ¿Tienes un cupón de descuento?
+                  </h3>
+                  
+                  {appliedCoupon ? (
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-green-700 flex items-center gap-1">
+                          <CheckCircle2 size={14} /> Cupón Aplicado
+                        </p>
+                        <p className="text-xs text-green-600 font-medium">
+                          {appliedCoupon.code} (-{appliedCoupon.discountType === 'percentage' ? `${appliedCoupon.discountValue}%` : formatPrice(appliedCoupon.discountValue)})
+                        </p>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={removeCoupon}
+                        className="text-stone-400 hover:text-red-500 transition-colors p-1"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        placeholder="Ingresa tu código" 
+                        value={couponCode}
+                        onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                        className="flex-1 p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-[#E3242B] bg-stone-50 uppercase text-sm font-bold"
+                      />
+                      <button 
+                        type="button"
+                        onClick={applyCoupon}
+                        disabled={!couponCode.trim()}
+                        className="bg-stone-900 text-white px-4 rounded-xl font-bold text-sm disabled:opacity-50 transition-opacity"
+                      >
+                        Aplicar
+                      </button>
+                    </div>
+                  )}
+                  {couponError && (
+                    <p className="text-xs text-red-500 mt-2 font-medium">{couponError}</p>
+                  )}
+                </div>
               </div>
 
               {/* Total & Submit Footer (Fixed at bottom of form) */}
               <div className="p-4 bg-white border-t border-stone-200 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] shrink-0">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-stone-500 font-medium">Subtotal</span>
-                  <span className="text-2xl font-bold text-[#1A1A1A]">{formatPrice(cartTotal)}</span>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-stone-500 text-sm font-medium">Subtotal</span>
+                  <span className="text-stone-700 font-bold">{formatPrice(cartSubtotal)}</span>
+                </div>
+                {appliedCoupon && (
+                  <div className="flex justify-between items-center mb-2 text-green-600">
+                    <span className="text-sm font-medium">Descuento ({appliedCoupon.code})</span>
+                    <span className="font-bold">-{formatPrice(discountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center mb-4 pt-2 border-t border-stone-100">
+                  <span className="text-stone-800 font-bold">Total a pagar</span>
+                  <span className="text-2xl font-black text-[#E3242B]">{formatPrice(cartTotal)}</span>
                 </div>
                 <button 
                   type="submit"
@@ -1174,15 +1355,20 @@ function ProductCard({ product, addToCart, isStoreOpen }: { product: Product, ad
 
   return (
     <div className="bg-white rounded-3xl p-4 shadow-sm border border-stone-100 flex gap-4 transition-all hover:shadow-md relative overflow-hidden">
-      {product.tags && product.tags.length > 0 && (
-        <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
-          {product.tags.map(tag => (
-            <span key={tag} className="bg-[#E3242B] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+      <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
+        {product.isDailyOffer && (
+          <span className="bg-[#E3242B] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
+            <Tag size={10} /> Promoción
+          </span>
+        )}
+        {product.tags && product.tags.length > 0 && (
+          product.tags.map(tag => (
+            <span key={tag} className="bg-stone-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
               {tag}
             </span>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
       
       <div className="w-28 h-28 shrink-0 relative">
         {product.imageUrl ? (

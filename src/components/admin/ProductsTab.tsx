@@ -1,17 +1,37 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, DatabaseZap, X, Save, Upload, Loader2, Package } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase';
 import { cn } from '../../lib/utils';
 import { Product, Category } from '../../types';
 
-export default function ProductsTab({ products, categories }: { products: Product[], categories: Category[] }) {
+export default function ProductsTab() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
+
+  useEffect(() => {
+    const unsubProducts = onSnapshot(query(collection(db, 'products')), (snapshot) => {
+      setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
+    });
+
+    const unsubCategories = onSnapshot(query(collection(db, 'categories'), orderBy('order')), (snapshot) => {
+      setCategories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
+      setLoading(false);
+    });
+
+    return () => {
+      unsubProducts();
+      unsubCategories();
+    };
+  }, []);
+
+  if (loading && products.length === 0) return <div className="p-8 text-center text-stone-500 font-medium">Cargando productos...</div>;
   const [isAdding, setIsAdding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const convertDriveUrl = (url: string) => {
     if (url.includes('drive.google.com')) {
@@ -70,8 +90,9 @@ export default function ProductsTab({ products, categories }: { products: Produc
     }
 
     try {
+      const { id, ...productData } = editingProduct;
       const finalProduct = {
-        ...editingProduct,
+        ...productData,
         imageUrl: convertDriveUrl(editingProduct.imageUrl || ''),
         price: Number(editingProduct.price),
         isAvailable: editingProduct.isAvailable ?? true,
@@ -111,7 +132,7 @@ export default function ProductsTab({ products, categories }: { products: Produc
           <p className="text-stone-500 text-sm">Gestiona los platos y bebidas de tu restaurante</p>
         </div>
         <button 
-          onClick={() => { setIsAdding(true); setEditingProduct({ isAvailable: true }); }} 
+          onClick={() => { setIsAdding(true); setEditingProduct({ isAvailable: true }); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} 
           className="w-full md:w-auto bg-stone-900 text-white px-6 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-stone-800 text-sm font-black uppercase tracking-wider shadow-lg shadow-stone-200 transition-all active:scale-95"
         >
           <Plus size={18} /> Nuevo Producto
@@ -156,21 +177,22 @@ export default function ProductsTab({ products, categories }: { products: Produc
                     className="flex-1 px-4 py-3 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all text-sm font-medium" 
                   />
                   <input 
+                    id="image-upload"
                     type="file" 
-                    ref={fileInputRef}
                     onChange={handleImageUpload}
                     className="hidden" 
                     accept="image/*"
                   />
-                  <button 
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="bg-stone-900 text-white px-4 py-3 rounded-2xl hover:bg-stone-800 transition-all flex items-center gap-2 text-xs font-black uppercase tracking-wider disabled:opacity-50 shadow-md"
+                  <label 
+                    htmlFor="image-upload"
+                    className={cn(
+                      "bg-stone-900 text-white px-4 py-3 rounded-2xl hover:bg-stone-800 transition-all flex items-center gap-2 text-xs font-black uppercase tracking-wider shadow-md cursor-pointer",
+                      isUploading && "opacity-50 pointer-events-none"
+                    )}
                   >
                     {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                     {isUploading ? `${Math.round(uploadProgress)}%` : 'Subir'}
-                  </button>
+                  </label>
                 </div>
                 {editingProduct?.imageUrl && (
                   <div className="mt-3 relative w-24 h-24 rounded-2xl overflow-hidden border-2 border-stone-100 shadow-sm">
@@ -269,7 +291,7 @@ export default function ProductsTab({ products, categories }: { products: Produc
                   <span className="text-[10px] font-black text-stone-400 uppercase tracking-wider">{product.isAvailable ? 'Activo' : 'Inactivo'}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => { setIsAdding(false); setEditingProduct(product); }} className="p-2 text-stone-400 hover:text-stone-900 hover:bg-stone-50 rounded-xl transition-all active:scale-90"><Edit2 size={18} /></button>
+                  <button onClick={() => { setIsAdding(false); setEditingProduct(product); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 text-stone-400 hover:text-stone-900 hover:bg-stone-50 rounded-xl transition-all active:scale-90"><Edit2 size={18} /></button>
                   <button onClick={() => handleDelete(product.id)} className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all active:scale-90"><Trash2 size={18} /></button>
                 </div>
               </div>

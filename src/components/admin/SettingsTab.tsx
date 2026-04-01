@@ -16,7 +16,11 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
     try {
       await updateDoc(doc(db, 'settings', 'store'), {
         isStoreOpen: editingSettings.isStoreOpen,
-        adminPin: editingSettings.adminPin || '021403',
+        storeStatusMode: editingSettings.storeStatusMode || 'manual',
+        autoOpenTime: editingSettings.autoOpenTime || '12:00',
+        autoCloseTime: editingSettings.autoCloseTime || '22:00',
+        whatsappNumber: editingSettings.whatsappNumber,
+        nequiNumber: editingSettings.nequiNumber,
         whatsappMessageHeader: editingSettings.whatsappMessageHeader,
         whatsappMessageFooter: editingSettings.whatsappMessageFooter,
         shareText: editingSettings.shareText,
@@ -103,71 +107,94 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
             </div>
           </div>
 
-          <div 
-            onClick={() => setEditingSettings({...editingSettings, isStoreOpen: !editingSettings.isStoreOpen})}
-            className={cn(
-              "p-6 rounded-3xl border-2 transition-all cursor-pointer flex items-center justify-between group/toggle",
-              editingSettings.isStoreOpen 
-                ? "bg-emerald-50/50 border-emerald-100 hover:border-emerald-200" 
-                : "bg-red-50/50 border-red-100 hover:border-red-200"
-            )}
-          >
-            <div className="flex items-center gap-4">
-              <div className={cn(
-                "w-4 h-4 rounded-full animate-pulse",
-                editingSettings.isStoreOpen ? "bg-emerald-500" : "bg-red-500"
-              )} />
-              <div>
-                <p className={cn(
-                  "text-sm font-black uppercase tracking-widest",
-                  editingSettings.isStoreOpen ? "text-emerald-700" : "text-red-700"
+          <div className="space-y-6">
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => setEditingSettings({...editingSettings, storeStatusMode: 'manual'})}
+                className={cn(
+                  "flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all",
+                  (!editingSettings.storeStatusMode || editingSettings.storeStatusMode === 'manual')
+                    ? "bg-stone-900 text-white shadow-md"
+                    : "bg-stone-100 text-stone-500 hover:bg-stone-200"
+                )}
+              >
+                Control Manual
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingSettings({...editingSettings, storeStatusMode: 'auto'})}
+                className={cn(
+                  "flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all",
+                  editingSettings.storeStatusMode === 'auto'
+                    ? "bg-stone-900 text-white shadow-md"
+                    : "bg-stone-100 text-stone-500 hover:bg-stone-200"
+                )}
+              >
+                Horario Automático
+              </button>
+            </div>
+
+            {(!editingSettings.storeStatusMode || editingSettings.storeStatusMode === 'manual') ? (
+              <div 
+                onClick={() => setEditingSettings({...editingSettings, isStoreOpen: !editingSettings.isStoreOpen})}
+                className={cn(
+                  "p-6 rounded-3xl border-2 transition-all cursor-pointer flex items-center justify-between group/toggle",
+                  editingSettings.isStoreOpen 
+                    ? "bg-emerald-50/50 border-emerald-100 hover:border-emerald-200" 
+                    : "bg-red-50/50 border-red-100 hover:border-red-200"
+                )}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "w-4 h-4 rounded-full animate-pulse",
+                    editingSettings.isStoreOpen ? "bg-emerald-500" : "bg-red-500"
+                  )} />
+                  <div>
+                    <p className={cn(
+                      "text-sm font-black uppercase tracking-widest",
+                      editingSettings.isStoreOpen ? "text-emerald-700" : "text-red-700"
+                    )}>
+                      {editingSettings.isStoreOpen ? 'Abierto' : 'Cerrado'}
+                    </p>
+                    <p className="text-xs text-stone-500 font-medium">
+                      {editingSettings.isStoreOpen ? 'Los clientes pueden realizar pedidos normalmente.' : 'Los clientes verán un aviso de local cerrado.'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className={cn(
+                  "w-14 h-8 rounded-full p-1 transition-all duration-300",
+                  editingSettings.isStoreOpen ? "bg-emerald-500" : "bg-stone-200"
                 )}>
-                  {editingSettings.isStoreOpen ? 'Abierto' : 'Cerrado'}
-                </p>
-                <p className="text-xs text-stone-500 font-medium">
-                  {editingSettings.isStoreOpen ? 'Los clientes pueden realizar pedidos normalmente.' : 'Los clientes verán un aviso de local cerrado.'}
-                </p>
+                  <div className={cn(
+                    "w-6 h-6 bg-white rounded-full shadow-sm transition-all duration-300",
+                    editingSettings.isStoreOpen ? "translate-x-6" : "translate-x-0"
+                  )} />
+                </div>
               </div>
-            </div>
-            
-            <div className={cn(
-              "w-14 h-8 rounded-full p-1 transition-all duration-300",
-              editingSettings.isStoreOpen ? "bg-emerald-500" : "bg-stone-200"
-            )}>
-              <div className={cn(
-                "w-6 h-6 bg-white rounded-full shadow-sm transition-all duration-300",
-                editingSettings.isStoreOpen ? "translate-x-6" : "translate-x-0"
-              )} />
-            </div>
-          </div>
-        </div>
-
-        {/* Security Card */}
-        <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-stone-100 group">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 bg-stone-50 rounded-2xl flex items-center justify-center text-stone-400 group-hover:bg-stone-900 group-hover:text-white transition-all duration-300">
-              <Shield size={24} />
-            </div>
-            <div>
-              <h3 className="text-xl font-black text-stone-900">Seguridad del Panel</h3>
-              <p className="text-stone-400 text-xs font-medium">Protege el acceso a la administración</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">PIN de Acceso (6 Dígitos)</label>
-            <div className="relative max-w-xs">
-              <input 
-                required 
-                type="text" 
-                maxLength={6}
-                value={editingSettings.adminPin || ''} 
-                onChange={e => setEditingSettings({...editingSettings, adminPin: e.target.value})} 
-                className="w-full px-6 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-black text-2xl tracking-[0.5em] text-center" 
-                placeholder="000000"
-              />
-            </div>
-            <p className="text-xs text-stone-400 font-medium leading-relaxed">Este PIN se solicitará cada vez que intentes ingresar al panel desde un nuevo dispositivo.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-4 p-6 bg-stone-50 rounded-3xl border border-stone-100">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Hora de Apertura</label>
+                  <input 
+                    type="time" 
+                    value={editingSettings.autoOpenTime || '12:00'} 
+                    onChange={e => setEditingSettings({...editingSettings, autoOpenTime: e.target.value})} 
+                    className="w-full px-6 py-4 bg-white border border-stone-200 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Hora de Cierre</label>
+                  <input 
+                    type="time" 
+                    value={editingSettings.autoCloseTime || '22:00'} 
+                    onChange={e => setEditingSettings({...editingSettings, autoCloseTime: e.target.value})} 
+                    className="w-full px-6 py-4 bg-white border border-stone-200 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm" 
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -184,6 +211,28 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
           </div>
 
           <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Número de WhatsApp (con código de país, ej: 573000000000)</label>
+              <input 
+                type="text" 
+                value={editingSettings.whatsappNumber || ''} 
+                onChange={e => setEditingSettings({...editingSettings, whatsappNumber: e.target.value})} 
+                className="w-full px-6 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm" 
+                placeholder="573144052399"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Número de Nequi / Transferencia</label>
+              <input 
+                type="text" 
+                value={editingSettings.nequiNumber || ''} 
+                onChange={e => setEditingSettings({...editingSettings, nequiNumber: e.target.value})} 
+                className="w-full px-6 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm" 
+                placeholder="3124726152"
+              />
+            </div>
+
             <div className="space-y-2">
               <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Encabezado WhatsApp</label>
               <input 

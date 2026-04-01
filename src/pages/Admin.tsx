@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc, limit, where } from 'firebase/firestore';
 import { db } from '../firebase';
-import { LayoutDashboard, Package, ListOrdered, Settings, LogOut, MessageSquare, BarChart3, Gift } from 'lucide-react';
+import { LayoutDashboard, Package, ListOrdered, Settings, LogOut, MessageSquare, BarChart3, Gift, Tag } from 'lucide-react';
 import { Order, Product, Category, StoreSettings, Review, Customer } from '../types';
 import { auth } from '../firebase';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
@@ -12,13 +12,14 @@ import ReviewsTab from '../components/admin/ReviewsTab';
 import SettingsTab from '../components/admin/SettingsTab';
 import DashboardTab from '../components/admin/DashboardTab';
 import LoyaltyTab from '../components/admin/LoyaltyTab';
+import CouponsTab from '../components/admin/CouponsTab';
 
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [pinInput, setPinInput] = useState('');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'products' | 'categories' | 'reviews' | 'settings' | 'loyalty'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'products' | 'categories' | 'reviews' | 'settings' | 'loyalty' | 'coupons'>('dashboard');
   const [user, setUser] = useState(auth.currentUser);
+  const [initialOrdersLoaded, setInitialOrdersLoaded] = useState(false);
 
   useEffect(() => {
     return auth.onAuthStateChanged((u) => {
@@ -26,12 +27,14 @@ export default function Admin() {
     });
   }, []);
 
+  useEffect(() => {
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
   // Data states
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const [settings, setSettings] = useState<StoreSettings>({
     isStoreOpen: true,
     loyaltyEnabled: true,
@@ -63,6 +66,8 @@ export default function Admin() {
           loyaltyMinOrder: data.loyaltyMinOrder ?? 0,
           referralEnabled: data.referralEnabled ?? true,
           adminPin: data.adminPin ?? '021403',
+          whatsappNumber: data.whatsappNumber ?? '573144052399',
+          nequiNumber: data.nequiNumber ?? '3124726152',
           whatsappMessageHeader: data.whatsappMessageHeader ?? '🥪 *NUEVO PEDIDO - BOCADO EXPRESS*',
           whatsappMessageFooter: data.whatsappMessageFooter ?? 'Vengo de Menú Digital Bocado Express',
           shareText: data.shareText ?? 'Los mejores cubanos y suizos de la ciudad',
@@ -80,7 +85,7 @@ export default function Admin() {
   }, []);
 
   useEffect(() => {
-    const isGoogleAdmin = user?.email === 'bocadoexpress.mtr@gmail.com';
+    const isGoogleAdmin = user?.email === 'bocadoexpress.mtr@gmail.com' || user?.email === 'enamoradooluis@gmail.com';
     if (!isAuthenticated || !isGoogleAdmin) return;
 
     // Initialize settings if they don't exist once we are admin
@@ -93,60 +98,35 @@ export default function Admin() {
     };
     initSettings();
 
-    const unsubOrders = onSnapshot(query(collection(db, 'orders'), orderBy('createdAt', 'desc')), (snapshot) => {
-      const newOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+    const unsubPendingOrders = onSnapshot(query(collection(db, 'orders'), where('status', '==', 'pending')), (snapshot) => {
+      const newPending = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
       
-      // Use a ref or a more stable way to check for new orders to avoid dependency loops
-      // For now, we'll just check if it's the first load
-      setOrders(prev => {
-        if (prev.length > 0 && newOrders.length > prev.length) {
+      setPendingOrders(prev => {
+        if (prev.length > 0 && newPending.length > prev.length) {
           const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
           audio.play().catch(e => console.log("Audio play failed:", e));
+          
+          if (Notification.permission === 'granted') {
+            new Notification('¡Nuevo Pedido!', { 
+              body: 'Tienes un nuevo pedido en Bocado Express',
+              icon: 'https://api.iconify.design/lucide:sandwich.svg?color=%23E3242B'
+            });
+          }
         }
-        return newOrders;
+        return newPending;
       });
     }, (err) => console.error(err));
 
-    const unsubProducts = onSnapshot(query(collection(db, 'products')), (snapshot) => {
-      setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
-    }, (err) => console.error(err));
-
-    const unsubCategories = onSnapshot(query(collection(db, 'categories'), orderBy('order')), (snapshot) => {
-      setCategories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
-    }, (err) => console.error(err));
-
-    const unsubReviews = onSnapshot(query(collection(db, 'reviews'), orderBy('createdAt', 'desc')), (snapshot) => {
-      setReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review)));
-    }, (err) => console.error(err));
-
-    const unsubCustomers = onSnapshot(collection(db, 'customers'), (snapshot) => {
-      setCustomers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer)));
-    }, (err) => console.error(err));
-
     return () => {
-      unsubOrders();
-      unsubProducts();
-      unsubCategories();
-      unsubReviews();
-      unsubCustomers();
+      unsubPendingOrders();
     };
   }, [isAuthenticated, user]);
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (pinInput === settings.adminPin) {
-      setIsAuthenticated(true);
-      setPinInput('');
-    } else {
-      alert("PIN incorrecto");
-    }
-  };
 
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      const allowedEmails = ['bocadoexpress.mtr@gmail.com'];
+      const allowedEmails = ['bocadoexpress.mtr@gmail.com', 'enamoradooluis@gmail.com'];
       if (allowedEmails.includes(result.user.email || '')) {
         setIsAuthenticated(true);
       } else {
@@ -171,34 +151,15 @@ export default function Admin() {
       <div className="min-h-screen flex items-center justify-center bg-stone-100">
         <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
           <h1 className="text-2xl font-bold mb-2">Panel de Administración</h1>
-          <p className="text-stone-500 mb-8">Ingresa el PIN de seguridad para acceder.</p>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <input 
-              type="password" 
-              maxLength={6}
-              value={pinInput}
-              onChange={(e) => setPinInput(e.target.value)}
-              placeholder="PIN de 6 dígitos"
-              className="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] border border-stone-300 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none"
-              required
-            />
-            <button 
-              type="submit"
-              className="w-full bg-stone-900 text-white font-bold py-3 px-4 rounded-xl hover:bg-stone-800 transition-colors"
-            >
-              Ingresar
-            </button>
-          </form>
+          <p className="text-stone-500 mb-8">Inicia sesión con tu cuenta de Google autorizada.</p>
           
-          <div className="mt-6 pt-6 border-t border-stone-100">
-            <button 
-              onClick={handleGoogleLogin}
-              className="w-full flex items-center justify-center gap-3 bg-white border border-stone-300 text-stone-700 font-medium py-3 px-4 rounded-xl hover:bg-stone-50 transition-colors"
-            >
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-              Recuperar con Google
-            </button>
-          </div>
+          <button 
+            onClick={handleGoogleLogin}
+            className="w-full flex items-center justify-center gap-3 bg-white border border-stone-300 text-stone-700 font-medium py-3 px-4 rounded-xl hover:bg-stone-50 transition-colors"
+          >
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+            Ingresar con Google
+          </button>
         </div>
       </div>
     );
@@ -318,9 +279,9 @@ export default function Admin() {
           >
             <ListOrdered size={18} />
             <span className="font-medium">Pedidos</span>
-            {orders.filter(o => o.status === 'pending').length > 0 && (
+            {pendingOrders.length > 0 && (
               <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                {orders.filter(o => o.status === 'pending').length}
+                {pendingOrders.length}
               </span>
             )}
           </button>
@@ -351,6 +312,13 @@ export default function Admin() {
           >
             <Gift size={18} />
             <span className="font-medium">Lealtad</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('coupons')}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${activeTab === 'coupons' ? 'bg-stone-900 text-white shadow-lg shadow-stone-200' : 'hover:bg-stone-100 text-stone-500 hover:text-stone-900'}`}
+          >
+            <Tag size={18} />
+            <span className="font-medium">Cupones</span>
           </button>
           <button 
             onClick={() => setActiveTab('settings')}
@@ -402,9 +370,9 @@ export default function Admin() {
         >
           <ListOrdered size={20} />
           <span className="text-[10px] font-medium">Pedidos</span>
-          {orders.filter(o => o.status === 'pending').length > 0 && (
+          {pendingOrders.length > 0 && (
             <span className="absolute top-1 right-1 bg-red-500 text-white text-[8px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
-              {orders.filter(o => o.status === 'pending').length}
+              {pendingOrders.length}
             </span>
           )}
         </button>
@@ -421,6 +389,13 @@ export default function Admin() {
         >
           <Gift size={20} />
           <span className="text-[10px] font-medium">Lealtad</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('coupons')}
+          className={`hidden sm:flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${activeTab === 'coupons' ? 'text-stone-900' : 'text-stone-400'}`}
+        >
+          <Tag size={20} />
+          <span className="text-[10px] font-medium">Cupones</span>
         </button>
         <button 
           onClick={() => setActiveTab('settings')}
@@ -454,12 +429,13 @@ export default function Admin() {
               </button>
             </div>
           )}
-          {activeTab === 'dashboard' && <DashboardTab orders={orders} products={products} customers={customers} settings={settings} />}
-          {activeTab === 'orders' && <OrdersTab orders={orders} settings={settings} />}
-          {activeTab === 'products' && <ProductsTab products={products} categories={categories} />}
-          {activeTab === 'categories' && <CategoriesTab categories={categories} />}
-          {activeTab === 'reviews' && <ReviewsTab reviews={reviews} />}
-          {activeTab === 'loyalty' && <LoyaltyTab customers={customers} settings={settings} />}
+          {activeTab === 'dashboard' && <DashboardTab settings={settings} />}
+          {activeTab === 'orders' && <OrdersTab settings={settings} />}
+          {activeTab === 'products' && <ProductsTab />}
+          {activeTab === 'categories' && <CategoriesTab />}
+          {activeTab === 'reviews' && <ReviewsTab />}
+          {activeTab === 'loyalty' && <LoyaltyTab settings={settings} />}
+          {activeTab === 'coupons' && <CouponsTab />}
           {activeTab === 'settings' && <SettingsTab settings={settings} />}
         </div>
       </main>

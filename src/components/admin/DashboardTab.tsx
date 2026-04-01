@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { db } from '../../firebase';
 import { Order, Product, Customer } from '../../types';
 import { DollarSign, ShoppingBag, TrendingUp, Package, Users, Receipt, Trophy, Clock } from 'lucide-react';
 import { 
@@ -15,7 +17,36 @@ import {
 } from 'recharts';
 import { StoreSettings } from '../../types';
 
-export default function DashboardTab({ orders, products, customers, settings }: { orders: Order[], products: Product[], customers: Customer[], settings: StoreSettings }) {
+export default function DashboardTab({ settings }: { settings: StoreSettings }) {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubOrders = onSnapshot(query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(500)), (snapshot) => {
+      setOrders(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)));
+    });
+
+    const unsubProducts = onSnapshot(query(collection(db, 'products')), (snapshot) => {
+      setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
+    });
+
+    const unsubCustomers = onSnapshot(query(collection(db, 'customers'), orderBy('createdAt', 'desc'), limit(1000)), (snapshot) => {
+      setCustomers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer)));
+    });
+
+    setLoading(false);
+
+    return () => {
+      unsubOrders();
+      unsubProducts();
+      unsubCustomers();
+    };
+  }, []);
+
+  if (loading && orders.length === 0) return <div className="p-8 text-center text-stone-500">Cargando estadísticas...</div>;
+
   const completedOrders = orders.filter(o => o.status === 'completed');
   const totalSales = completedOrders.reduce((sum, o) => sum + o.totalAmount, 0);
   const totalOrders = completedOrders.length;
@@ -44,13 +75,18 @@ export default function DashboardTab({ orders, products, customers, settings }: 
   const last7Days = [...Array(7)].map((_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    return d.toISOString().split('T')[0];
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }).reverse();
 
   const salesData = last7Days.map(date => {
-    const dayOrders = completedOrders.filter(o => o.createdAt.startsWith(date));
+    const dayOrders = completedOrders.filter(o => {
+      const orderDate = new Date(o.createdAt);
+      const localDateStr = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}-${String(orderDate.getDate()).padStart(2, '0')}`;
+      return localDateStr === date;
+    });
     const daySales = dayOrders.reduce((sum, o) => sum + o.totalAmount, 0);
-    const dayName = new Date(date).toLocaleDateString('es-CO', { weekday: 'short' });
+    const [year, month, day] = date.split('-');
+    const dayName = new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleDateString('es-CO', { weekday: 'short' });
     return { name: dayName, sales: daySales, date };
   });
 
