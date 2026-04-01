@@ -165,9 +165,16 @@ export default function Menu() {
       e.preventDefault();
       setDeferredPrompt(e);
       setShowInstallButton(true);
+      console.log("PWA: beforeinstallprompt fired");
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Check if already installed
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+    if (isStandalone) {
+      setShowInstallButton(false);
+    }
 
     return () => {
       unsubSettings();
@@ -695,35 +702,9 @@ export default function Menu() {
       {/* Header */}
       <header className="bg-[#1A1A1A] text-white p-4 sticky top-0 z-40 shadow-md shrink-0">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <img 
-              src="/logo.png" 
-              alt="Bocado Express Logo" 
-              className="w-12 h-12 rounded-xl object-cover border border-white/10"
-              referrerPolicy="no-referrer"
-              onError={(e) => {
-                // Fallback if logo fails to load
-                e.currentTarget.style.display = 'none';
-                const parent = e.currentTarget.parentElement;
-                if (parent) {
-                  const fallback = document.createElement('div');
-                  fallback.className = 'flex flex-col';
-                  fallback.innerHTML = `
-                    <h1 class="text-3xl font-display font-bold tracking-wider text-[#FDE047] leading-none">BOCADO</h1>
-                    <span class="text-xs font-bold tracking-widest text-white uppercase mt-1">Express</span>
-                  `;
-                  parent.appendChild(fallback);
-                }
-              }}
-            />
-            <div className="flex flex-col sm:hidden lg:flex">
-              <h1 className="text-2xl font-display font-bold tracking-wider text-[#FDE047] leading-none">
-                BOCADO
-              </h1>
-              <span className="text-[10px] font-bold tracking-widest text-white uppercase mt-1">
-                Express
-              </span>
-            </div>
+          <div className="flex flex-col">
+            <h1 className="text-3xl font-display font-bold tracking-wider text-[#FDE047] leading-none">BOCADO</h1>
+            <span className="text-xs font-bold tracking-widest text-white uppercase mt-1">Express</span>
           </div>
             <div className="flex gap-3">
               {showInstallButton && (

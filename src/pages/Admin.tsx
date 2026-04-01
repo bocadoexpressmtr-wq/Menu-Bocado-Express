@@ -263,22 +263,9 @@ export default function Admin() {
       <aside className="hidden md:flex w-64 bg-white border-r border-stone-200 text-stone-600 flex-col sticky top-0 h-screen">
         <div className="p-6 border-b border-stone-100">
           <div className="flex items-center gap-3">
-            <img 
-              src="/logo.png" 
-              alt="Bocado Logo" 
-              className="w-10 h-10 rounded-xl object-cover border border-stone-100"
-              referrerPolicy="no-referrer"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                const parent = e.currentTarget.parentElement;
-                if (parent) {
-                  const fallback = document.createElement('div');
-                  fallback.className = 'w-10 h-10 bg-stone-900 rounded-xl flex items-center justify-center text-white';
-                  fallback.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>';
-                  parent.prepend(fallback);
-                }
-              }}
-            />
+            <div className="w-10 h-10 bg-stone-900 rounded-xl flex items-center justify-center text-white">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+            </div>
             <div>
               <h1 className="text-lg font-bold text-stone-900 leading-none">Bocado</h1>
               <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mt-1">Admin Panel</p>
@@ -369,22 +356,9 @@ export default function Admin() {
       {/* Mobile Top Header */}
       <header className="md:hidden bg-white border-b border-stone-200 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-2">
-          <img 
-            src="/logo.png" 
-            alt="Bocado Logo" 
-            className="w-8 h-8 rounded-lg object-cover"
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-              const parent = e.currentTarget.parentElement;
-              if (parent) {
-                const fallback = document.createElement('div');
-                fallback.className = 'w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-white';
-                fallback.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>';
-                parent.prepend(fallback);
-              }
-            }}
-          />
+          <div className="w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          </div>
           <h1 className="text-lg font-bold text-stone-900">Bocado Admin</h1>
         </div>
         <button 
