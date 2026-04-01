@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, onSnapshot, query, orderBy, addDoc, doc, getDoc, setDoc, getDocs, where, limit } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ShoppingCart, MapPin, Send, Plus, Minus, Trash2, CheckCircle2, Instagram, Facebook, Music2, Gift, Info, X, Store, Bike, UtensilsCrossed, Wallet, Banknote, PartyPopper, Star, Share2, Globe, MessageCircle, Youtube, Twitter, Tag } from 'lucide-react';
+import { ShoppingCart, MapPin, Send, Plus, Minus, Trash2, CheckCircle2, Instagram, Facebook, Music2, Gift, Info, X, Store, Bike, UtensilsCrossed, Wallet, Banknote, PartyPopper, Star, Share2, Globe, MessageCircle, Youtube, Twitter, Tag, Download, MessageSquare } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Product, Category, CartItem, DeliveryType, PaymentMethod, StoreSettings, Customer, Review, Coupon } from '../types';
 
@@ -64,6 +64,20 @@ export default function Menu() {
   const [isUpsellOpen, setIsUpsellOpen] = useState(false);
   const [orderNotes, setOrderNotes] = useState('');
   const [referredBy, setReferredBy] = useState<string | null>(null);
+
+  // Feedback State
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [feedbackData, setFeedbackData] = useState({
+    customerName: '',
+    customerPhone: '',
+    message: '',
+    type: 'sugerencia' as 'queja' | 'sugerencia' | 'otro'
+  });
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+
+  // PWA Install State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallButton, setShowInstallButton] = useState(false);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-CO', {
@@ -147,10 +161,53 @@ export default function Menu() {
     };
     checkCoupons();
 
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallButton(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
     return () => {
       unsubSettings();
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setShowInstallButton(false);
+    }
+    setDeferredPrompt(null);
+  };
+
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackData.customerName || !feedbackData.message) {
+      alert("Por favor completa los campos obligatorios");
+      return;
+    }
+    setIsSubmittingFeedback(true);
+    try {
+      await addDoc(collection(db, 'feedback'), {
+        ...feedbackData,
+        status: 'unread',
+        createdAt: new Date().toISOString()
+      });
+      alert("¡Gracias por tu mensaje! Lo revisaremos pronto.");
+      setIsFeedbackModalOpen(false);
+      setFeedbackData({ customerName: '', customerPhone: '', message: '', type: 'sugerencia' });
+    } catch (error) {
+      console.error("Error submitting feedback", error);
+      alert("Hubo un error al enviar tu mensaje. Por favor intenta de nuevo.");
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
 
   const isCurrentlyOpen = () => {
     if (settings.storeStatusMode === 'auto' && settings.autoOpenTime && settings.autoCloseTime) {
@@ -473,7 +530,7 @@ export default function Menu() {
         message += `*(El costo del domicilio se confirmará por este medio)*\n`;
       }
 
-      if (loyaltyOptIn) {
+      if (settings.loyaltyEnabled && loyaltyOptIn) {
         message += `\n🎁 *Cliente Club Bocado* (Pendiente de sello)\n`;
       }
 
@@ -638,31 +695,73 @@ export default function Menu() {
       {/* Header */}
       <header className="bg-[#1A1A1A] text-white p-4 sticky top-0 z-40 shadow-md shrink-0">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <div className="flex flex-col">
-            <h1 className="text-3xl font-display font-bold tracking-wider text-[#FDE047] leading-none">
-              BOCADO
-            </h1>
-            <span className="text-xs font-bold tracking-widest text-white uppercase mt-1">
-              Express
-            </span>
+          <div className="flex items-center gap-3">
+            <img 
+              src="/logo.png" 
+              alt="Bocado Express Logo" 
+              className="w-12 h-12 rounded-xl object-cover border border-white/10"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                // Fallback if logo fails to load
+                e.currentTarget.style.display = 'none';
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  const fallback = document.createElement('div');
+                  fallback.className = 'flex flex-col';
+                  fallback.innerHTML = `
+                    <h1 class="text-3xl font-display font-bold tracking-wider text-[#FDE047] leading-none">BOCADO</h1>
+                    <span class="text-xs font-bold tracking-widest text-white uppercase mt-1">Express</span>
+                  `;
+                  parent.appendChild(fallback);
+                }
+              }}
+            />
+            <div className="flex flex-col sm:hidden lg:flex">
+              <h1 className="text-2xl font-display font-bold tracking-wider text-[#FDE047] leading-none">
+                BOCADO
+              </h1>
+              <span className="text-[10px] font-bold tracking-widest text-white uppercase mt-1">
+                Express
+              </span>
+            </div>
           </div>
-          <div className="flex gap-3">
-            <button 
-              onClick={() => setIsReviewsModalOpen(true)}
+            <div className="flex gap-3">
+              {showInstallButton && (
+                <button 
+                  onClick={handleInstallClick}
+                  className="p-2 bg-[#FDE047] hover:bg-[#FDE047]/80 rounded-full transition-colors text-[#1A1A1A] flex items-center gap-1 animate-pulse"
+                  title="Instalar App"
+                >
+                  <Download size={20} />
+                  <span className="text-xs font-bold hidden sm:inline">Instalar App</span>
+                </button>
+              )}
+              <button 
+                onClick={() => setIsFeedbackModalOpen(true)}
+                className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
+                title="Sugerencias"
+              >
+                <MessageSquare size={20} />
+                <span className="text-xs font-bold hidden sm:inline">Sugerencias</span>
+              </button>
+              <button 
+                onClick={() => setIsReviewsModalOpen(true)}
               className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
               title="Ver Reseñas"
             >
               <Star size={20} className="fill-[#FDE047]" />
               <span className="text-xs font-bold hidden sm:inline">Reseñas</span>
             </button>
-            <button 
-              onClick={() => setIsLoyaltyModalOpen(true)}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
-              title="Club Bocado"
-            >
-              <Gift size={20} />
-              <span className="text-xs font-bold hidden sm:inline">Club Bocado</span>
-            </button>
+            {settings.loyaltyEnabled && (
+              <button 
+                onClick={() => setIsLoyaltyModalOpen(true)}
+                className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
+                title="Club Bocado"
+              >
+                <Gift size={20} />
+                <span className="text-xs font-bold hidden sm:inline">Club Bocado</span>
+              </button>
+            )}
             <button 
               onClick={handleShare}
               className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-[#FDE047] flex items-center gap-1"
@@ -695,7 +794,7 @@ export default function Menu() {
                 activeCategory === 'offers' ? "bg-[#E3242B] text-white shadow-md" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
               )}
             >
-              🏷️ Promociones
+              🏷️ Ofertas
             </button>
           )}
           {popularProducts.length > 0 && (
@@ -761,7 +860,7 @@ export default function Menu() {
             {(activeCategory === 'todos' || activeCategory === 'offers') && dailyOffers.length > 0 && (
               <section id="category-offers" className="mb-10">
                 <h2 className="text-2xl font-display font-bold text-[#1A1A1A] mb-4 flex items-center gap-2">
-                  <span className="text-[#E3242B]">🏷️</span> Promociones del Día
+                  <span className="text-[#E3242B]">🏷️</span> Ofertas del Día
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {dailyOffers.map(product => (
@@ -1125,37 +1224,39 @@ export default function Menu() {
                 </div>
 
                 {/* Loyalty Opt-In */}
-                <div className="bg-stone-900 p-5 rounded-2xl text-white shadow-xl relative overflow-hidden border border-stone-800">
-                  <div className="absolute -top-4 -right-4 p-4 opacity-10 rotate-12"><Gift size={80} /></div>
-                  <h3 className="font-black text-[#FDE047] mb-1 flex items-center gap-2 uppercase tracking-tight">
-                    <Gift size={18} /> Club Bocado Express
-                  </h3>
-                  <p className="text-xs text-stone-400 mb-3 font-medium">Acumula pedidos y gana comida gratis.</p>
-                  
-                  {settings.loyaltyMinOrder > 0 && (
-                    <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-4">
-                      <p className="text-[10px] text-stone-300 font-bold uppercase tracking-widest leading-relaxed">
-                        ⚠️ Nota: Para recibir un sello, el pedido debe ser mayor a <span className="text-[#FDE047]">{formatPrice(settings.loyaltyMinOrder)}</span>
-                      </p>
-                    </div>
-                  )}
-                  
-                  <label className="flex items-start gap-3 cursor-pointer group">
-                    <div className={cn(
-                      "mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
-                      loyaltyOptIn ? "bg-[#E3242B] border-[#E3242B]" : "border-stone-700 group-hover:border-stone-500"
-                    )}>
-                      {loyaltyOptIn && <CheckCircle2 size={16} className="text-white" />}
-                    </div>
-                    <input 
-                      type="checkbox" 
-                      checked={loyaltyOptIn}
-                      onChange={(e) => setLoyaltyOptIn(e.target.checked)}
-                      className="hidden"
-                    />
-                    <span className="text-sm font-bold text-stone-200 leading-tight">Sí, quiero unirme gratis y recibir mi sello.</span>
-                  </label>
-                </div>
+                {settings.loyaltyEnabled && (
+                  <div className="bg-stone-900 p-5 rounded-2xl text-white shadow-xl relative overflow-hidden border border-stone-800">
+                    <div className="absolute -top-4 -right-4 p-4 opacity-10 rotate-12"><Gift size={80} /></div>
+                    <h3 className="font-black text-[#FDE047] mb-1 flex items-center gap-2 uppercase tracking-tight">
+                      <Gift size={18} /> Club Bocado Express
+                    </h3>
+                    <p className="text-xs text-stone-400 mb-3 font-medium">Acumula pedidos y gana comida gratis.</p>
+                    
+                    {settings.loyaltyMinOrder > 0 && (
+                      <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-4">
+                        <p className="text-[10px] text-stone-300 font-bold uppercase tracking-widest leading-relaxed">
+                          ⚠️ Nota: Para recibir un sello, el pedido debe ser mayor a <span className="text-[#FDE047]">{formatPrice(settings.loyaltyMinOrder)}</span>
+                        </p>
+                      </div>
+                    )}
+                    
+                    <label className="flex items-start gap-3 cursor-pointer group">
+                      <div className={cn(
+                        "mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
+                        loyaltyOptIn ? "bg-[#E3242B] border-[#E3242B]" : "border-stone-700 group-hover:border-stone-500"
+                      )}>
+                        {loyaltyOptIn && <CheckCircle2 size={16} className="text-white" />}
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={loyaltyOptIn}
+                        onChange={(e) => setLoyaltyOptIn(e.target.checked)}
+                        className="hidden"
+                      />
+                      <span className="text-sm font-bold text-stone-200 leading-tight">Sí, quiero unirme gratis y recibir mi sello.</span>
+                    </label>
+                  </div>
+                )}
               </div>
 
               {/* Total & Submit Footer (Fixed at bottom of form) */}
@@ -1193,7 +1294,7 @@ export default function Menu() {
       )}
 
       {/* Loyalty Modal */}
-      {isLoyaltyModalOpen && (
+      {settings.loyaltyEnabled && isLoyaltyModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
             <div className="bg-[#1A1A1A] p-6 text-center relative">
@@ -1385,6 +1486,98 @@ export default function Menu() {
           </div>
         </div>
       )}
+      {/* Feedback Modal */}
+      {isFeedbackModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="bg-[#1A1A1A] p-8 text-center relative">
+              <button 
+                onClick={() => setIsFeedbackModalOpen(false)} 
+                className="absolute top-6 right-6 text-stone-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"
+              >
+                <X size={24} />
+              </button>
+              <div className="w-20 h-20 bg-[#FDE047] rounded-3xl flex items-center justify-center mx-auto mb-6 rotate-3 shadow-xl shadow-[#FDE047]/20">
+                <MessageSquare size={40} className="text-[#1A1A1A]" />
+              </div>
+              <h2 className="text-3xl font-display font-bold text-white uppercase tracking-wider">Sugerencias</h2>
+              <p className="text-stone-400 text-sm mt-2 font-medium">Ayúdanos a mejorar tu experiencia</p>
+            </div>
+            
+            <form onSubmit={handleSubmitFeedback} className="p-8 space-y-6 bg-stone-50">
+              <div className="flex gap-2 p-1 bg-stone-200 rounded-2xl">
+                {(['sugerencia', 'queja', 'otro'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setFeedbackData({ ...feedbackData, type: t })}
+                    className={cn(
+                      "flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                      feedbackData.type === t 
+                        ? "bg-[#1A1A1A] text-white shadow-lg" 
+                        : "text-stone-500 hover:text-stone-700"
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">Tu Nombre *</label>
+                  <input
+                    type="text"
+                    required
+                    value={feedbackData.customerName}
+                    onChange={(e) => setFeedbackData({ ...feedbackData, customerName: e.target.value })}
+                    className="w-full px-5 py-4 bg-white border border-stone-200 rounded-2xl focus:ring-2 focus:ring-[#1A1A1A] outline-none transition-all text-sm font-medium"
+                    placeholder="Ej: Juan Pérez"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">Tu Teléfono (Opcional)</label>
+                  <input
+                    type="tel"
+                    value={feedbackData.customerPhone}
+                    onChange={(e) => setFeedbackData({ ...feedbackData, customerPhone: e.target.value })}
+                    className="w-full px-5 py-4 bg-white border border-stone-200 rounded-2xl focus:ring-2 focus:ring-[#1A1A1A] outline-none transition-all text-sm font-medium"
+                    placeholder="Ej: 300 123 4567"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">Tu Mensaje *</label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={feedbackData.message}
+                    onChange={(e) => setFeedbackData({ ...feedbackData, message: e.target.value })}
+                    className="w-full px-5 py-4 bg-white border border-stone-200 rounded-2xl focus:ring-2 focus:ring-[#1A1A1A] outline-none transition-all text-sm font-medium resize-none"
+                    placeholder="Escribe aquí tus comentarios..."
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmittingFeedback}
+                className="w-full bg-[#1A1A1A] text-white font-black uppercase tracking-[0.2em] py-5 rounded-2xl shadow-xl shadow-stone-200 hover:bg-stone-800 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 text-sm"
+              >
+                {isSubmittingFeedback ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Send size={18} />
+                    Enviar Mensaje
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1405,7 +1598,7 @@ function ProductCard({ product, addToCart, isStoreOpen }: { product: Product, ad
       <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
         {product.isDailyOffer && (
           <span className="bg-[#E3242B] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
-            <Tag size={10} /> Promoción
+            <Tag size={10} /> Oferta
           </span>
         )}
         {product.tags && product.tags.length > 0 && (

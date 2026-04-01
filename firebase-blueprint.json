@@ -250,6 +250,41 @@
         }
       },
       "required": ["customerName", "text", "rating", "isVisible", "createdAt"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "A customer complaint or suggestion",
+      "type": "object",
+      "properties": {
+        "customerName": {
+          "type": "string",
+          "description": "Name of the customer"
+        },
+        "customerPhone": {
+          "type": "string",
+          "description": "Phone number of the customer"
+        },
+        "message": {
+          "type": "string",
+          "description": "Feedback message"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["queja", "sugerencia", "otro"],
+          "description": "Type of feedback"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["unread", "read"],
+          "description": "Status of the feedback"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the feedback was created"
+        }
+      },
+      "required": ["customerName", "message", "type", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -280,6 +315,10 @@
     "reviews": {
       "schema": { "$ref": "#/entities/Review" },
       "description": "Customer reviews"
+    },
+    "feedback": {
+      "schema": { "$ref": "#/entities/Feedback" },
+      "description": "Customer feedback (complaints/suggestions)"
     }
   }
 }

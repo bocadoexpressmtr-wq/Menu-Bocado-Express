@@ -104,3 +104,13 @@ export interface Review {
   isVisible: boolean;
   createdAt: string;
 }
+
+export interface Feedback {
+  id?: string;
+  customerName: string;
+  customerPhone?: string;
+  message: string;
+  type: 'queja' | 'sugerencia' | 'otro';
+  status: 'unread' | 'read';
+  createdAt: string;
+}

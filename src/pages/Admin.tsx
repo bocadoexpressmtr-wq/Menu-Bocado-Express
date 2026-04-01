@@ -13,12 +13,13 @@ import SettingsTab from '../components/admin/SettingsTab';
 import DashboardTab from '../components/admin/DashboardTab';
 import LoyaltyTab from '../components/admin/LoyaltyTab';
 import CouponsTab from '../components/admin/CouponsTab';
+import FeedbackTab from '../components/admin/FeedbackTab';
 
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [settingsLoading, setSettingsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'products' | 'categories' | 'reviews' | 'settings' | 'loyalty' | 'coupons'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'products' | 'categories' | 'reviews' | 'settings' | 'loyalty' | 'coupons' | 'feedback'>('dashboard');
   const [user, setUser] = useState(auth.currentUser);
 
   const [isSeeding, setIsSeeding] = useState(false);
@@ -261,12 +262,28 @@ export default function Admin() {
       {/* Sidebar for Desktop */}
       <aside className="hidden md:flex w-64 bg-white border-r border-stone-200 text-stone-600 flex-col sticky top-0 h-screen">
         <div className="p-6 border-b border-stone-100">
-          <h1 className="text-xl font-bold text-stone-900 flex items-center gap-2">
-            <div className="w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-white">
-              <LayoutDashboard size={18} />
+          <div className="flex items-center gap-3">
+            <img 
+              src="/logo.png" 
+              alt="Bocado Logo" 
+              className="w-10 h-10 rounded-xl object-cover border border-stone-100"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  const fallback = document.createElement('div');
+                  fallback.className = 'w-10 h-10 bg-stone-900 rounded-xl flex items-center justify-center text-white';
+                  fallback.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>';
+                  parent.prepend(fallback);
+                }
+              }}
+            />
+            <div>
+              <h1 className="text-lg font-bold text-stone-900 leading-none">Bocado</h1>
+              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mt-1">Admin Panel</p>
             </div>
-            Bocado Admin
-          </h1>
+          </div>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           <button 
@@ -324,6 +341,13 @@ export default function Admin() {
             <span className="font-medium">Cupones</span>
           </button>
           <button 
+            onClick={() => setActiveTab('feedback')}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${activeTab === 'feedback' ? 'bg-stone-900 text-white shadow-lg shadow-stone-200' : 'hover:bg-stone-100 text-stone-500 hover:text-stone-900'}`}
+          >
+            <MessageSquare size={18} />
+            <span className="font-medium">Sugerencias</span>
+          </button>
+          <button 
             onClick={() => setActiveTab('settings')}
             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${activeTab === 'settings' ? 'bg-stone-900 text-white shadow-lg shadow-stone-200' : 'hover:bg-stone-100 text-stone-500 hover:text-stone-900'}`}
           >
@@ -344,12 +368,25 @@ export default function Admin() {
 
       {/* Mobile Top Header */}
       <header className="md:hidden bg-white border-b border-stone-200 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
-        <h1 className="text-lg font-bold text-stone-900 flex items-center gap-2">
-          <div className="w-7 h-7 bg-stone-900 rounded-lg flex items-center justify-center text-white">
-            <LayoutDashboard size={16} />
-          </div>
-          Bocado Admin
-        </h1>
+        <div className="flex items-center gap-2">
+          <img 
+            src="/logo.png" 
+            alt="Bocado Logo" 
+            className="w-8 h-8 rounded-lg object-cover"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              const parent = e.currentTarget.parentElement;
+              if (parent) {
+                const fallback = document.createElement('div');
+                fallback.className = 'w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-white';
+                fallback.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>';
+                parent.prepend(fallback);
+              }
+            }}
+          />
+          <h1 className="text-lg font-bold text-stone-900">Bocado Admin</h1>
+        </div>
         <button 
           onClick={handleLogout}
           className="p-2 text-stone-500 hover:text-red-600 transition-colors"
@@ -401,6 +438,13 @@ export default function Admin() {
           <span className="text-[10px] font-medium">Cupones</span>
         </button>
         <button 
+          onClick={() => setActiveTab('feedback')}
+          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${activeTab === 'feedback' ? 'text-stone-900' : 'text-stone-400'}`}
+        >
+          <MessageSquare size={20} />
+          <span className="text-[10px] font-medium">Sugerencias</span>
+        </button>
+        <button 
           onClick={() => setActiveTab('settings')}
           className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${activeTab === 'settings' ? 'text-stone-900' : 'text-stone-400'}`}
         >
@@ -439,6 +483,7 @@ export default function Admin() {
           {activeTab === 'reviews' && <ReviewsTab />}
           {activeTab === 'loyalty' && <LoyaltyTab settings={settings} />}
           {activeTab === 'coupons' && <CouponsTab />}
+          {activeTab === 'feedback' && <FeedbackTab />}
           {activeTab === 'settings' && <SettingsTab settings={settings} />}
         </div>
       </main>
