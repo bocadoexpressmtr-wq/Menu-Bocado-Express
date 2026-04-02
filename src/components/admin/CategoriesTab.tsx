@@ -64,9 +64,9 @@ export default function CategoriesTab() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-2xl font-bold text-stone-900">Categorías</h2>
-        <button onClick={() => { setIsAdding(true); setEditingCategory({ order: categories.length + 1 }); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="bg-stone-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-stone-800 text-sm font-medium shadow-sm">
+        <button onClick={() => { setIsAdding(true); setEditingCategory({ order: categories.length + 1 }); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="w-full sm:w-auto bg-stone-900 text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-stone-800 text-sm font-medium shadow-sm">
           <Plus size={16} /> Nueva Categoría
         </button>
       </div>

@@ -62,7 +62,7 @@ export default function ProductsTab() {
     return url;
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -72,33 +72,33 @@ export default function ProductsTab() {
       return;
     }
 
+    // Validate file size (limit to 800KB for Firestore safety)
+    if (file.size > 800 * 1024) {
+      alert("La imagen es demasiado grande. Por favor selecciona una menor a 800KB.");
+      return;
+    }
+
     setIsUploading(true);
     setUploadProgress(0);
 
-    const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
-
-    uploadTask.on('state_changed', 
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setUploadProgress(progress);
-      }, 
-      (error) => {
-        console.error("Upload error details:", {
-          code: error.code,
-          message: error.message,
-          serverResponse: error.serverResponse
-        });
-        alert(`Error al subir la imagen: ${error.message}. Verifica los permisos de Firebase Storage.`);
-        setIsUploading(false);
-      }, 
-      async () => {
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        setEditingProduct(prev => ({ ...prev, imageUrl: downloadURL }));
-        setIsUploading(false);
-        setUploadProgress(0);
+    const reader = new FileReader();
+    reader.onloadstart = () => setUploadProgress(10);
+    reader.onprogress = (event) => {
+      if (event.lengthComputable) {
+        setUploadProgress((event.loaded / event.total) * 100);
       }
-    );
+    };
+    reader.onload = () => {
+      const base64String = reader.result as string;
+      setEditingProduct(prev => ({ ...prev, imageUrl: base64String }));
+      setIsUploading(false);
+      setUploadProgress(0);
+    };
+    reader.onerror = () => {
+      alert("Error al leer el archivo.");
+      setIsUploading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -188,7 +188,7 @@ export default function ProductsTab() {
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">Imagen (URL o Archivo)</label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input 
                     type="text" 
                     placeholder="Pega URL de Drive o Web"
@@ -206,7 +206,7 @@ export default function ProductsTab() {
                   <label 
                     htmlFor="image-upload"
                     className={cn(
-                      "bg-stone-900 text-white px-4 py-3 rounded-2xl hover:bg-stone-800 transition-all flex items-center gap-2 text-xs font-black uppercase tracking-wider shadow-md cursor-pointer",
+                      "bg-stone-900 text-white px-4 py-3 rounded-2xl hover:bg-stone-800 transition-all flex items-center justify-center gap-2 text-xs font-black uppercase tracking-wider shadow-md cursor-pointer sm:w-auto",
                       isUploading && "opacity-50 pointer-events-none"
                     )}
                   >

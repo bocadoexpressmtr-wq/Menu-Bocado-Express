@@ -264,7 +264,7 @@ export default function Admin() {
         <div className="p-6 border-b border-stone-100">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-stone-900 rounded-xl flex items-center justify-center text-white">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
             </div>
             <div>
               <h1 className="text-lg font-bold text-stone-900 leading-none">Bocado</h1>
@@ -357,7 +357,7 @@ export default function Admin() {
       <header className="md:hidden bg-white border-b border-stone-200 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-stone-900 rounded-lg flex items-center justify-center text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
           </div>
           <h1 className="text-lg font-bold text-stone-900">Bocado Admin</h1>
         </div>
@@ -370,61 +370,70 @@ export default function Admin() {
       </header>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 px-2 py-1 flex justify-around items-center z-50 pb-safe">
-        <button 
-          onClick={() => setActiveTab('dashboard')}
-          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${activeTab === 'dashboard' ? 'text-stone-900' : 'text-stone-400'}`}
-        >
-          <BarChart3 size={20} />
-          <span className="text-[10px] font-medium">Dashboard</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('orders')}
-          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors relative ${activeTab === 'orders' ? 'text-stone-900' : 'text-stone-400'}`}
-        >
-          <ListOrdered size={20} />
-          <span className="text-[10px] font-medium">Pedidos</span>
-          {pendingOrders.length > 0 && (
-            <span className="absolute top-1 right-1 bg-red-500 text-white text-[8px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
-              {pendingOrders.length}
-            </span>
-          )}
-        </button>
-        <button 
-          onClick={() => setActiveTab('products')}
-          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${activeTab === 'products' ? 'text-stone-900' : 'text-stone-400'}`}
-        >
-          <Package size={20} />
-          <span className="text-[10px] font-medium">Productos</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('loyalty')}
-          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${activeTab === 'loyalty' ? 'text-stone-900' : 'text-stone-400'}`}
-        >
-          <Gift size={20} />
-          <span className="text-[10px] font-medium">Lealtad</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('coupons')}
-          className={`hidden sm:flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${activeTab === 'coupons' ? 'text-stone-900' : 'text-stone-400'}`}
-        >
-          <Tag size={20} />
-          <span className="text-[10px] font-medium">Cupones</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('feedback')}
-          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${activeTab === 'feedback' ? 'text-stone-900' : 'text-stone-400'}`}
-        >
-          <MessageSquare size={20} />
-          <span className="text-[10px] font-medium">Sugerencias</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('settings')}
-          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors ${activeTab === 'settings' ? 'text-stone-900' : 'text-stone-400'}`}
-        >
-          <Settings size={20} />
-          <span className="text-[10px] font-medium">Ajustes</span>
-        </button>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 flex items-center z-50 pb-safe overflow-x-auto scrollbar-hide shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <div className="flex items-center px-4 min-w-max">
+          <button 
+            onClick={() => setActiveTab('dashboard')}
+            className={`flex flex-col items-center gap-1 p-3 min-w-[72px] transition-colors ${activeTab === 'dashboard' ? 'text-stone-900' : 'text-stone-400'}`}
+          >
+            <BarChart3 size={20} />
+            <span className="text-[10px] font-bold">Dashboard</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('orders')}
+            className={`flex flex-col items-center gap-1 p-3 min-w-[72px] transition-colors relative ${activeTab === 'orders' ? 'text-stone-900' : 'text-stone-400'}`}
+          >
+            <ListOrdered size={20} />
+            <span className="text-[10px] font-bold">Pedidos</span>
+            {pendingOrders.length > 0 && (
+              <span className="absolute top-2 right-4 bg-red-500 text-white text-[8px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                {pendingOrders.length}
+              </span>
+            )}
+          </button>
+          <button 
+            onClick={() => setActiveTab('products')}
+            className={`flex flex-col items-center gap-1 p-3 min-w-[72px] transition-colors ${activeTab === 'products' ? 'text-stone-900' : 'text-stone-400'}`}
+          >
+            <Package size={20} />
+            <span className="text-[10px] font-bold">Productos</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('categories')}
+            className={`flex flex-col items-center gap-1 p-3 min-w-[72px] transition-colors ${activeTab === 'categories' ? 'text-stone-900' : 'text-stone-400'}`}
+          >
+            <ListOrdered size={20} />
+            <span className="text-[10px] font-bold">Categorías</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('loyalty')}
+            className={`flex flex-col items-center gap-1 p-3 min-w-[72px] transition-colors ${activeTab === 'loyalty' ? 'text-stone-900' : 'text-stone-400'}`}
+          >
+            <Gift size={20} />
+            <span className="text-[10px] font-bold">Lealtad</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('coupons')}
+            className={`flex flex-col items-center gap-1 p-3 min-w-[72px] transition-colors ${activeTab === 'coupons' ? 'text-stone-900' : 'text-stone-400'}`}
+          >
+            <Tag size={20} />
+            <span className="text-[10px] font-bold">Cupones</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('feedback')}
+            className={`flex flex-col items-center gap-1 p-3 min-w-[72px] transition-colors ${activeTab === 'feedback' ? 'text-stone-900' : 'text-stone-400'}`}
+          >
+            <MessageSquare size={20} />
+            <span className="text-[10px] font-bold">Sugerencias</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('settings')}
+            className={`flex flex-col items-center gap-1 p-3 min-w-[72px] transition-colors ${activeTab === 'settings' ? 'text-stone-900' : 'text-stone-400'}`}
+          >
+            <Settings size={20} />
+            <span className="text-[10px] font-bold">Ajustes</span>
+          </button>
+        </div>
       </nav>
 
       {/* Main Content */}

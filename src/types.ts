@@ -20,6 +20,7 @@ export interface Category {
 
 export interface CartItem extends Product {
   quantity: number;
+  selections?: string[];
 }
 
 export type DeliveryType = 'domicilio' | 'recoger' | 'local';
@@ -42,6 +43,7 @@ export interface Order {
     name: string;
     quantity: number;
     price: number;
+    selections?: string[];
   }[];
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'preparing' | 'delivering' | 'completed' | 'cancelled' | 'archived';

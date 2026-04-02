@@ -157,34 +157,34 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
             {showArchived ? 'Historial de pedidos guardados' : 'Administra y despacha las órdenes de tus clientes'}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button 
             onClick={() => setShowArchived(!showArchived)}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2",
+              "flex-1 sm:flex-none px-4 py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-2",
               showArchived ? "bg-stone-900 text-white" : "bg-white border border-stone-200 text-stone-600 hover:bg-stone-50"
             )}
           >
             <Archive size={14} />
-            {showArchived ? 'Ver Activos' : 'Ver Archivados'}
+            {showArchived ? 'Activos' : 'Archivados'}
           </button>
           {selectedOrders.length > 0 && (
-            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4">
+            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 w-full sm:w-auto">
               <button 
                 onClick={bulkArchive}
-                className="bg-stone-100 text-stone-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-stone-200 transition-colors flex items-center gap-2"
+                className="flex-1 sm:flex-none bg-stone-100 text-stone-600 px-3 py-2 rounded-xl text-[10px] font-bold hover:bg-stone-200 transition-colors flex items-center justify-center gap-1.5"
               >
-                <Archive size={14} /> Archivar ({selectedOrders.length})
+                <Archive size={14} /> ({selectedOrders.length})
               </button>
               <button 
                 onClick={bulkDelete}
-                className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors flex items-center gap-2"
+                className="flex-1 sm:flex-none bg-red-50 text-red-600 px-3 py-2 rounded-xl text-[10px] font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5"
               >
-                <Trash2 size={14} /> Eliminar ({selectedOrders.length})
+                <Trash2 size={14} /> ({selectedOrders.length})
               </button>
             </div>
           )}
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border border-stone-200 shadow-sm">
+          <div className="hidden sm:flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border border-stone-200 shadow-sm">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
             <span className="text-xs font-bold text-stone-600 uppercase tracking-wider">En Vivo</span>
           </div>
@@ -227,19 +227,19 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
               </button>
 
               {/* Card Header */}
-              <div className="p-4 md:p-6 pl-12 md:pl-16 border-b border-stone-50 flex flex-col md:flex-row justify-between gap-4">
-                <div className="flex items-start gap-3">
+              <div className="p-4 md:p-6 pl-12 md:pl-16 border-b border-stone-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex items-start gap-3 w-full sm:w-auto">
                   <div className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center font-black text-base shadow-sm shrink-0",
                     order.status === 'completed' ? 'bg-stone-100 text-stone-400' : 'bg-stone-900 text-white'
                   )}>
                     {order.customerName ? order.customerName.charAt(0) : '?'}
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                      <h3 className="font-black text-base md:text-lg text-stone-900 leading-tight">{order.customerName}</h3>
+                      <h3 className="font-black text-base md:text-lg text-stone-900 leading-tight truncate">{order.customerName}</h3>
                       <span className={cn(
-                        "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1 border",
+                        "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-1 border",
                         order.status === 'completed' 
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                           : 'bg-amber-50 text-amber-700 border-amber-100 animate-pulse'
@@ -248,7 +248,7 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
                         {order.status === 'completed' ? 'Entregado' : 'Pendiente'}
                       </span>
                     </div>
-                    <p className="text-stone-400 text-[10px] md:text-xs font-medium flex items-center gap-1.5">
+                    <p className="text-stone-400 text-[10px] md:text-xs font-medium flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                       <a 
                         href={`https://wa.me/${order.customerPhone.replace(/\D/g, '')}`} 
                         target="_blank" 
@@ -257,31 +257,33 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
                       >
                         {order.customerPhone}
                       </a>
-                      <span className="w-0.5 h-0.5 bg-stone-200 rounded-full" />
-                      {new Date(order.createdAt).toLocaleString('es-CO', { 
-                        day: '2-digit', 
-                        month: 'short', 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
+                      <span className="hidden xs:block w-0.5 h-0.5 bg-stone-200 rounded-full" />
+                      <span className="whitespace-nowrap">
+                        {new Date(order.createdAt).toLocaleString('es-CO', { 
+                          day: '2-digit', 
+                          month: 'short', 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </span>
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 self-end md:self-center">
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                   {order.status === 'pending' && (
                     <div className="flex items-center gap-2">
                       {confirmingOrder === order.id ? (
                         <div className="flex items-center gap-1 animate-in zoom-in-95 duration-200">
                           <button 
                             onClick={() => handleComplete(order)}
-                            className="bg-emerald-600 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-700 transition-all shadow-md"
+                            className="bg-emerald-600 text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-emerald-700 transition-all shadow-md"
                           >
-                            Confirmar
+                            Sí
                           </button>
                           <button 
                             onClick={() => setConfirmingOrder(null)}
-                            className="bg-stone-100 text-stone-600 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-stone-200 transition-all"
+                            className="bg-stone-100 text-stone-600 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-stone-200 transition-all"
                           >
                             No
                           </button>
@@ -289,10 +291,11 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
                       ) : (
                         <button 
                           onClick={() => setConfirmingOrder(order.id!)}
-                          className="bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-emerald-600 transition-all shadow-md shadow-emerald-100 flex items-center gap-1.5 active:scale-95"
+                          className="bg-emerald-500 text-white px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs font-black hover:bg-emerald-600 transition-all shadow-md shadow-emerald-100 flex items-center gap-1.5 active:scale-95"
                         >
                           <CheckCircle size={14} />
-                          Completar
+                          <span className="hidden xs:inline">Completar</span>
+                          <span className="xs:hidden">OK</span>
                         </button>
                       )}
                     </div>
@@ -324,14 +327,29 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
                   <h4 className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em] mb-3">Detalle</h4>
                   <div className="space-y-2.5">
                     {order.items.map((item: any, i: number) => (
-                      <div key={i} className="flex items-center justify-between group/item">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-stone-50 rounded-lg flex items-center justify-center text-stone-400 font-black text-[10px] group-hover/item:bg-stone-900 group-hover/item:text-white transition-colors">
-                            {item.quantity}
+                      <div key={i} className="group/item">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 bg-stone-50 rounded-lg flex items-center justify-center text-stone-400 font-black text-[10px] group-hover/item:bg-stone-900 group-hover/item:text-white transition-colors">
+                              {item.quantity}
+                            </div>
+                            <span className="font-bold text-stone-700 text-sm">{item.name}</span>
                           </div>
-                          <span className="font-bold text-stone-700 text-sm">{item.name}</span>
+                          <span className="text-stone-400 font-medium text-xs">{formatPrice(item.price * item.quantity)}</span>
                         </div>
-                        <span className="text-stone-400 font-medium text-xs">{formatPrice(item.price * item.quantity)}</span>
+                        {item.selections && item.selections.length > 0 && (
+                          <div className="ml-8 mt-1 flex flex-wrap gap-1">
+                            {(() => {
+                              const counts: Record<string, number> = {};
+                              item.selections.forEach((s: string) => counts[s] = (counts[s] || 0) + 1);
+                              return Object.entries(counts).map(([name, count], idx) => (
+                                <span key={idx} className="bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded text-[9px] font-black uppercase flex items-center gap-1">
+                                  <span className="text-stone-900">{count}x</span> {name}
+                                </span>
+                              ));
+                            })()}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

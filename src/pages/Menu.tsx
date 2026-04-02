@@ -75,6 +75,25 @@ export default function Menu() {
   });
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
+  // iOS Scroll Lock
+  useEffect(() => {
+    if (isCartOpen || isLoyaltyModalOpen || isReviewsModalOpen || isFeedbackModalOpen || orderSuccess) {
+      document.body.style.overflow = 'hidden';
+      // For iOS Safari fixed position issues
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+    } else {
+      document.body.style.overflow = 'unset';
+      document.body.style.position = 'static';
+      document.body.style.width = 'auto';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+      document.body.style.position = 'static';
+      document.body.style.width = 'auto';
+    };
+  }, [isCartOpen, isLoyaltyModalOpen, isReviewsModalOpen, isFeedbackModalOpen, orderSuccess]);
+
   // PWA Install State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
@@ -279,7 +298,44 @@ export default function Menu() {
     }).filter(item => item.quantity > 0));
   };
 
-  const cartSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const toggleSelection = (cartItemId: string, selectionName: string, maxSelections: number, action: 'add' | 'remove' = 'add') => {
+    setCart(prev => prev.map(item => {
+      if (item.id === cartItemId) {
+        const currentSelections = item.selections || [];
+        if (action === 'add' && currentSelections.length < maxSelections) {
+          return { ...item, selections: [...currentSelections, selectionName] };
+        } else if (action === 'remove') {
+          const index = currentSelections.lastIndexOf(selectionName);
+          if (index !== -1) {
+            const newSelections = [...currentSelections];
+            newSelections.splice(index, 1);
+            return { ...item, selections: newSelections };
+          }
+        }
+      }
+      return item;
+    }));
+  };
+
+  const getComboMaxSelections = (description: string) => {
+    // Match "2 Cubanos", "4 Cubanos", or just a number if it's a combo
+    const match = description.match(/(\d+)\s*(Cubanos|unidades|piezas)?/i);
+    return match ? parseInt(match[1]) : 0;
+  };
+
+  const cartSubtotal = cart.reduce((sum, item) => {
+    let extraPrice = 0;
+    if (item.selections) {
+      extraPrice = item.selections.reduce((extra, sel) => {
+        const lowerSel = sel.toLowerCase();
+        if (lowerSel.includes('pollo') || lowerSel.includes('carne')) {
+          return extra + 1000;
+        }
+        return extra;
+      }, 0);
+    }
+    return sum + ((item.price + extraPrice) * item.quantity);
+  }, 0);
   const discountAmount = appliedCoupon 
     ? (appliedCoupon.discountType === 'percentage' 
         ? cartSubtotal * (appliedCoupon.discountValue / 100) 
@@ -486,7 +542,8 @@ export default function Menu() {
           productId: item.id,
           name: item.name,
           quantity: item.quantity,
-          price: item.price
+          price: item.price,
+          selections: item.selections || []
         })),
         subtotal: cartSubtotal,
         discountAmount: discountAmount,
@@ -524,7 +581,25 @@ export default function Menu() {
 
       message += `\n🛒 *Detalle del pedido:*\n`;
       cart.forEach(item => {
-        message += `- ${item.quantity}x ${item.name} (${formatPrice(item.price * item.quantity)})\n`;
+        let extraPrice = 0;
+        if (item.selections) {
+          extraPrice = item.selections.reduce((extra, sel) => {
+            const lowerSel = sel.toLowerCase();
+            if (lowerSel.includes('pollo') || lowerSel.includes('carne')) {
+              return extra + 1000;
+            }
+            return extra;
+          }, 0);
+        }
+        const itemTotal = (item.price + extraPrice) * item.quantity;
+        message += `- ${item.quantity}x ${item.name} (${formatPrice(itemTotal)})\n`;
+        
+        if (item.selections && item.selections.length > 0) {
+          const counts: Record<string, number> = {};
+          item.selections.forEach(s => counts[s] = (counts[s] || 0) + 1);
+          const grouped = Object.entries(counts).map(([name, count]) => `${count}x ${name}`).join(', ');
+          message += `  _Elección: ${grouped}_\n`;
+        }
       });
       
       if (appliedCoupon) {
@@ -969,23 +1044,122 @@ export default function Menu() {
             <form onSubmit={submitOrder} className="flex-1 flex flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto p-4 space-y-6">
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-100">
-                  {cart.map(item => (
-                    <div key={item.id} className="flex gap-3 items-center border-b border-stone-100 py-3 last:border-0 last:pb-0 first:pt-0">
-                      <div className="flex-1">
-                        <h4 className="font-bold text-sm text-[#1A1A1A]">{item.name}</h4>
-                        <span className="text-[#E3242B] font-bold text-sm">{formatPrice(item.price * item.quantity)}</span>
+                  {cart.map(item => {
+                    const isCombo = categories.find(c => c.id === item.categoryId)?.name.toLowerCase().includes('combo');
+                    const maxSelections = isCombo ? getComboMaxSelections(item.description) : 0;
+                    const cubanosList = products.filter(p => categories.find(c => c.id === p.categoryId)?.name.toLowerCase().includes('cubano'));
+
+                    let extraPrice = 0;
+                    if (item.selections) {
+                      extraPrice = item.selections.reduce((extra, sel) => {
+                        const lowerSel = sel.toLowerCase();
+                        if (lowerSel.includes('pollo') || lowerSel.includes('carne')) {
+                          return extra + 1000;
+                        }
+                        return extra;
+                      }, 0);
+                    }
+                    const itemTotal = (item.price + extraPrice) * item.quantity;
+
+                    return (
+                      <div key={item.id} className="border-b border-stone-100 py-3 last:border-0 last:pb-0 first:pt-0">
+                        <div className="flex gap-3 items-center">
+                          <div className="flex-1">
+                            <h4 className="font-bold text-sm text-[#1A1A1A]">{item.name}</h4>
+                            <span className="text-[#E3242B] font-bold text-sm">{formatPrice(itemTotal)}</span>
+                          </div>
+                          <div className="flex items-center gap-3 bg-stone-100 rounded-full px-2 py-1">
+                            <button type="button" onClick={() => updateQuantity(item.id, -1)} className="text-stone-500 hover:text-[#E3242B] p-1">
+                              {item.quantity === 1 ? <Trash2 size={14} /> : <Minus size={14} strokeWidth={3} />}
+                            </button>
+                            <span className="font-bold w-4 text-center text-sm">{item.quantity}</span>
+                            <button type="button" onClick={() => updateQuantity(item.id, 1)} className="text-stone-500 hover:text-green-600 p-1">
+                              <Plus size={14} strokeWidth={3} />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {isCombo && maxSelections > 0 && (
+                          <div className="mt-3 bg-stone-50 rounded-xl p-3 border border-stone-100">
+                            <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2">
+                              Escoge tus {maxSelections} Cubanos ({item.selections?.length || 0}/{maxSelections})
+                            </p>
+                            <div className="space-y-3">
+                              {/* Standard Flavors (Top) */}
+                              <div>
+                                <p className="text-[8px] font-black text-stone-400 uppercase tracking-widest mb-1.5 px-1">Básicos (Incluidos)</p>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                  {cubanosList
+                                    .filter(c => !c.name.toLowerCase().includes('pollo') && !c.name.toLowerCase().includes('carne'))
+                                    .map(cubano => {
+                                      const count = item.selections?.filter(s => s === cubano.name).length || 0;
+                                      return (
+                                        <div key={cubano.id} className="flex items-center justify-between bg-white p-1.5 rounded-lg border border-stone-100 shadow-sm">
+                                          <span className="text-[9px] font-bold text-stone-600 truncate mr-1">{cubano.name}</span>
+                                          <div className="flex items-center gap-1">
+                                            <button 
+                                              type="button" 
+                                              onClick={() => toggleSelection(item.id, cubano.name, maxSelections, 'remove')}
+                                              className="w-4 h-4 flex items-center justify-center bg-stone-50 text-stone-400 rounded hover:bg-stone-100"
+                                            >
+                                              <Minus size={8} strokeWidth={3} />
+                                            </button>
+                                            <span className="text-[9px] font-black w-2 text-center">{count}</span>
+                                            <button 
+                                              type="button" 
+                                              onClick={() => toggleSelection(item.id, cubano.name, maxSelections, 'add')}
+                                              disabled={(item.selections?.length || 0) >= maxSelections}
+                                              className="w-4 h-4 flex items-center justify-center bg-stone-900 text-white rounded disabled:opacity-30"
+                                            >
+                                              <Plus size={8} strokeWidth={3} />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                </div>
+                              </div>
+
+                              {/* Premium Flavors (Bottom) */}
+                              <div>
+                                <p className="text-[8px] font-black text-amber-600 uppercase tracking-widest mb-1.5 px-1">Premium (+ $1.000)</p>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                  {cubanosList
+                                    .filter(c => c.name.toLowerCase().includes('pollo') || c.name.toLowerCase().includes('carne'))
+                                    .map(cubano => {
+                                      const count = item.selections?.filter(s => s === cubano.name).length || 0;
+                                      return (
+                                        <div key={cubano.id} className="flex items-center justify-between bg-amber-50/50 p-1.5 rounded-lg border border-amber-100 shadow-sm">
+                                          <span className="text-[9px] font-bold text-amber-800 truncate mr-1">{cubano.name}</span>
+                                          <div className="flex items-center gap-1">
+                                            <button 
+                                              type="button" 
+                                              onClick={() => toggleSelection(item.id, cubano.name, maxSelections, 'remove')}
+                                              className="w-4 h-4 flex items-center justify-center bg-white text-amber-400 rounded hover:bg-amber-100"
+                                            >
+                                              <Minus size={8} strokeWidth={3} />
+                                            </button>
+                                            <span className="text-[9px] font-black w-2 text-center text-amber-900">{count}</span>
+                                            <button 
+                                              type="button" 
+                                              onClick={() => toggleSelection(item.id, cubano.name, maxSelections, 'add')}
+                                              disabled={(item.selections?.length || 0) >= maxSelections}
+                                              className="w-4 h-4 flex items-center justify-center bg-amber-600 text-white rounded disabled:opacity-30"
+                                            >
+                                              <Plus size={8} strokeWidth={3} />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-3 bg-stone-100 rounded-full px-2 py-1">
-                        <button type="button" onClick={() => updateQuantity(item.id, -1)} className="text-stone-500 hover:text-[#E3242B] p-1">
-                          {item.quantity === 1 ? <Trash2 size={14} /> : <Minus size={14} strokeWidth={3} />}
-                        </button>
-                        <span className="font-bold w-4 text-center text-sm">{item.quantity}</span>
-                        <button type="button" onClick={() => updateQuantity(item.id, 1)} className="text-stone-500 hover:text-green-600 p-1">
-                          <Plus size={14} strokeWidth={3} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Order Notes & Cross-selling */}
