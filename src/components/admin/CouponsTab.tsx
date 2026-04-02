@@ -107,109 +107,114 @@ export default function CouponsTab() {
       </div>
 
       {isAdding && (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-100">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-stone-800">
-              {editingId ? 'Editar Cupón' : 'Nuevo Cupón'}
-            </h3>
-            <button onClick={resetForm} className="p-2 text-stone-400 hover:text-stone-600 rounded-full hover:bg-stone-100">
-              <X size={20} />
-            </button>
-          </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div 
+            className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2.5rem] shadow-2xl border border-stone-100 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-white/80 backdrop-blur-md px-6 py-4 border-b border-stone-50 flex justify-between items-center z-10">
+              <h3 className="text-xl font-black text-stone-900">
+                {editingId ? 'Editar Cupón' : 'Nuevo Cupón'}
+              </h3>
+              <button onClick={resetForm} className="w-10 h-10 flex items-center justify-center rounded-full bg-stone-50 text-stone-400 hover:text-stone-600 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Código</label>
+            <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">Código del Cupón</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.code}
+                    onChange={e => setFormData({...formData, code: e.target.value.toUpperCase()})}
+                    className="w-full px-4 py-3 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-bold uppercase"
+                    placeholder="EJ: BOCADO10"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">Tipo de Descuento</label>
+                  <select
+                    value={formData.discountType}
+                    onChange={e => setFormData({...formData, discountType: e.target.value as 'percentage' | 'fixed'})}
+                    className="w-full px-4 py-3 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-bold appearance-none"
+                  >
+                    <option value="percentage">Porcentaje (%)</option>
+                    <option value="fixed">Monto Fijo ($)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">
+                    Valor del Descuento {formData.discountType === 'percentage' ? '(%)' : '($)'}
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    max={formData.discountType === 'percentage' ? "100" : undefined}
+                    value={formData.discountValue || ''}
+                    onChange={e => setFormData({...formData, discountValue: Number(e.target.value)})}
+                    className="w-full px-4 py-3 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-bold"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">Compra Mínima ($)</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    value={formData.minOrderValue || ''}
+                    onChange={e => setFormData({...formData, minOrderValue: Number(e.target.value)})}
+                    className="w-full px-4 py-3 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-bold"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">Fecha de Vencimiento (Opcional)</label>
+                  <input
+                    type="date"
+                    value={formData.expiryDate || ''}
+                    onChange={e => setFormData({...formData, expiryDate: e.target.value})}
+                    className="w-full px-4 py-3 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-4 bg-stone-50 rounded-2xl border border-stone-100">
                 <input
-                  type="text"
-                  required
-                  value={formData.code}
-                  onChange={e => setFormData({...formData, code: e.target.value.toUpperCase()})}
-                  className="w-full p-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none uppercase"
-                  placeholder="EJ: BOCADO10"
+                  type="checkbox"
+                  id="isActive"
+                  checked={formData.isActive}
+                  onChange={e => setFormData({...formData, isActive: e.target.checked})}
+                  className="w-5 h-5 rounded border-stone-300 text-stone-900 focus:ring-stone-900"
                 />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Tipo de Descuento</label>
-                <select
-                  value={formData.discountType}
-                  onChange={e => setFormData({...formData, discountType: e.target.value as 'percentage' | 'fixed'})}
-                  className="w-full p-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none"
-                >
-                  <option value="percentage">Porcentaje (%)</option>
-                  <option value="fixed">Monto Fijo ($)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">
-                  Valor del Descuento {formData.discountType === 'percentage' ? '(%)' : '($)'}
+                <label htmlFor="isActive" className="text-sm font-bold text-stone-600 uppercase tracking-tight cursor-pointer">
+                  Cupón Activo
                 </label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  max={formData.discountType === 'percentage' ? "100" : undefined}
-                  value={formData.discountValue || ''}
-                  onChange={e => setFormData({...formData, discountValue: Number(e.target.value)})}
-                  className="w-full p-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none"
-                />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Compra Mínima ($)</label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  value={formData.minOrderValue || ''}
-                  onChange={e => setFormData({...formData, minOrderValue: Number(e.target.value)})}
-                  className="w-full p-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none"
-                />
+              <div className="flex justify-end gap-3 pt-6 border-t border-stone-50">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="px-6 py-3 text-stone-400 font-black uppercase tracking-wider text-xs hover:text-stone-600 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="bg-stone-900 text-white px-8 py-3 rounded-2xl flex items-center gap-2 hover:bg-stone-800 font-black uppercase tracking-wider text-xs shadow-lg shadow-stone-200 transition-all active:scale-95"
+                >
+                  {editingId ? 'Actualizar Cupón' : 'Guardar Cupón'}
+                </button>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Fecha de Vencimiento (Opcional)</label>
-                <input
-                  type="date"
-                  value={formData.expiryDate || ''}
-                  onChange={e => setFormData({...formData, expiryDate: e.target.value})}
-                  className="w-full p-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 mt-4">
-              <input
-                type="checkbox"
-                id="isActive"
-                checked={formData.isActive}
-                onChange={e => setFormData({...formData, isActive: e.target.checked})}
-                className="w-5 h-5 rounded border-stone-300 text-stone-900 focus:ring-stone-900"
-              />
-              <label htmlFor="isActive" className="text-sm font-medium text-stone-700">
-                Cupón Activo
-              </label>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4">
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-6 py-3 text-stone-600 font-medium hover:bg-stone-100 rounded-xl transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-3 bg-stone-900 text-white font-medium rounded-xl hover:bg-stone-800 transition-colors"
-              >
-                {editingId ? 'Actualizar' : 'Guardar'}
-              </button>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
       )}
 
@@ -257,17 +262,17 @@ export default function CouponsTab() {
                     </button>
                   </td>
                   <td className="p-4 text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-1">
                       <button
                         onClick={() => editCoupon(coupon)}
-                        className="p-2 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-colors"
+                        className="p-2.5 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-all active:scale-90"
                         title="Editar"
                       >
                         <Edit2 size={18} />
                       </button>
                       <button
                         onClick={() => handleDelete(coupon.id!)}
-                        className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                        className="p-2.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all active:scale-90"
                         title="Eliminar"
                       >
                         <Trash2 size={18} />

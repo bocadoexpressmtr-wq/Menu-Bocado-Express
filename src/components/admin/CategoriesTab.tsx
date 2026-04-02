@@ -22,6 +22,11 @@ export default function CategoriesTab() {
 
   const [isAdding, setIsAdding] = useState(false);
 
+  const closeForm = () => {
+    setEditingCategory(null);
+    setIsAdding(false);
+  };
+
   if (loading && categories.length === 0) return <div className="p-8 text-center text-stone-500 font-medium">Cargando categorías...</div>;
 
   const handleSave = async (e: React.FormEvent) => {
@@ -72,28 +77,36 @@ export default function CategoriesTab() {
       </div>
 
       {(isAdding || editingCategory) && (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold">{isAdding ? 'Nueva Categoría' : 'Editar Categoría'}</h3>
-            <button onClick={() => { setEditingCategory(null); setIsAdding(false); }} className="text-stone-400 hover:text-stone-600"><X size={20} /></button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div 
+            className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-stone-100 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-stone-50 flex justify-between items-center">
+              <h3 className="text-xl font-black text-stone-900">{isAdding ? 'Nueva Categoría' : 'Editar Categoría'}</h3>
+              <button onClick={closeForm} className="w-10 h-10 flex items-center justify-center rounded-full bg-stone-50 text-stone-400 hover:text-stone-600 transition-colors"><X size={20} /></button>
+            </div>
+            
+            <form onSubmit={handleSave} className="p-6 md:p-8 space-y-6">
+              <div className="grid grid-cols-1 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">Nombre de la Categoría</label>
+                  <input required type="text" value={editingCategory?.name || ''} onChange={e => setEditingCategory({...editingCategory, name: e.target.value})} className="w-full px-4 py-3 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium" placeholder="Ej: Suizos" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest ml-1">Orden de Visualización</label>
+                  <input required type="number" value={editingCategory?.order || ''} onChange={e => setEditingCategory({...editingCategory, order: Number(e.target.value)})} className="w-full px-4 py-3 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-bold" placeholder="Ej: 1" />
+                </div>
+              </div>
+              
+              <div className="flex justify-end pt-6 border-t border-stone-50 gap-3">
+                <button type="button" onClick={closeForm} className="px-6 py-3 rounded-2xl text-stone-400 font-black uppercase tracking-wider text-xs hover:text-stone-600 transition-colors">Cancelar</button>
+                <button type="submit" className="bg-stone-900 text-white px-8 py-3 rounded-2xl flex items-center gap-2 hover:bg-stone-800 font-black uppercase tracking-wider text-xs shadow-lg shadow-stone-200 transition-all active:scale-95">
+                  <Save size={18} /> Guardar Categoría
+                </button>
+              </div>
+            </form>
           </div>
-          <form onSubmit={handleSave} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Nombre</label>
-                <input required type="text" value={editingCategory?.name || ''} onChange={e => setEditingCategory({...editingCategory, name: e.target.value})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Orden (Número)</label>
-                <input required type="number" value={editingCategory?.order || ''} onChange={e => setEditingCategory({...editingCategory, order: Number(e.target.value)})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none" />
-              </div>
-            </div>
-            <div className="flex justify-end pt-4 border-t border-stone-100">
-              <button type="submit" className="bg-stone-900 text-white px-6 py-2 rounded-xl flex items-center gap-2 hover:bg-stone-800 font-medium">
-                <Save size={16} /> Guardar
-              </button>
-            </div>
-          </form>
         </div>
       )}
 
@@ -113,8 +126,8 @@ export default function CategoriesTab() {
                 <td className="px-6 py-4 text-stone-500">{category.order}</td>
                 <td className="px-6 py-4 font-medium text-stone-900">{category.name}</td>
                 <td className="px-6 py-4 text-right">
-                  <button onClick={() => { setIsAdding(false); setEditingCategory(category); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-stone-400 hover:text-blue-600 p-1"><Edit2 size={16} /></button>
-                  <button onClick={() => handleDelete(category.id)} className="text-stone-400 hover:text-red-600 p-1 ml-2"><Trash2 size={16} /></button>
+                  <button onClick={() => { setIsAdding(false); setEditingCategory(category); }} className="text-stone-400 hover:text-stone-900 p-2 transition-colors"><Edit2 size={18} /></button>
+                  <button onClick={() => handleDelete(category.id)} className="text-stone-400 hover:text-red-600 p-2 ml-2 transition-colors"><Trash2 size={18} /></button>
                 </td>
               </tr>
             ))}
@@ -137,12 +150,12 @@ export default function CategoriesTab() {
               </span>
               <span className="font-medium text-stone-900">{category.name}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => { setIsAdding(false); setEditingCategory(category); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 text-stone-400 hover:text-blue-600">
-                <Edit2 size={18} />
+            <div className="flex items-center gap-1">
+              <button onClick={() => { setIsAdding(false); setEditingCategory(category); }} className="p-3 text-stone-400 hover:text-stone-900 transition-all active:scale-90">
+                <Edit2 size={20} />
               </button>
-              <button onClick={() => handleDelete(category.id)} className="p-2 text-stone-400 hover:text-red-600">
-                <Trash2 size={18} />
+              <button onClick={() => handleDelete(category.id)} className="p-3 text-stone-400 hover:text-red-600 transition-all active:scale-90">
+                <Trash2 size={20} />
               </button>
             </div>
           </div>
