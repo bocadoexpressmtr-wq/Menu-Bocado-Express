@@ -53,8 +53,8 @@ service cloud.firestore {
              request.resource.data.price >= 0 &&
              validStringLength('categoryId', 1, 100) &&
              request.resource.data.isAvailable is bool &&
-             (!('description' in request.resource.data) || validStringLength('description', 0, 500)) &&
-             (!('imageUrl' in request.resource.data) || validStringLength('imageUrl', 0, 1000)) &&
+             (!('description' in request.resource.data) || validStringLength('description', 0, 1000)) &&
+             (!('imageUrl' in request.resource.data) || validStringLength('imageUrl', 0, 1500000)) &&
              (!('isPopular' in request.resource.data) || request.resource.data.isPopular is bool) &&
              (!('isDailyOffer' in request.resource.data) || request.resource.data.isDailyOffer is bool) &&
              (!('isUpsell' in request.resource.data) || request.resource.data.isUpsell is bool) &&
