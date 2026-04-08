@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import { ShoppingCart, MapPin, Send, Plus, Minus, Trash2, CheckCircle2, Instagram, Facebook, Music2, Gift, Info, X, Store, Bike, UtensilsCrossed, Wallet, Banknote, PartyPopper, Star, Share2, Globe, MessageCircle, Youtube, Twitter, Tag, Download, MessageSquare } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Product, Category, CartItem, DeliveryType, PaymentMethod, StoreSettings, Customer, Review, Coupon } from '../types';
+import { useDialog } from '../context/DialogContext';
 
 export default function Menu() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -118,45 +119,17 @@ export default function Menu() {
       if (storedRef) setReferredBy(storedRef);
     }
 
-    const fetchStaticData = async () => {
-      const cachedData = sessionStorage.getItem('bocado_menu_data');
-      const cacheTime = sessionStorage.getItem('bocado_menu_time');
-      
-      // 15 minutes cache
-      if (cachedData && cacheTime && (Date.now() - parseInt(cacheTime) < 1000 * 60 * 15)) {
-        try {
-          const { p, c, r } = JSON.parse(cachedData);
-          setProducts(p); setCategories(c); setReviews(r);
-          return;
-        } catch (e) {
-          console.error("Cache parsing error", e);
-        }
-      }
+    const unsubProducts = onSnapshot(collection(db, 'products'), (snap) => {
+      setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
+    }, (error) => console.error("Error fetching products", error));
 
-      try {
-        const [pSnap, cSnap, rSnap] = await Promise.all([
-          getDocs(query(collection(db, 'products'))),
-          getDocs(query(collection(db, 'categories'), orderBy('order'))),
-          getDocs(query(collection(db, 'reviews'), orderBy('createdAt', 'desc'), limit(50)))
-        ]);
+    const unsubCategories = onSnapshot(query(collection(db, 'categories'), orderBy('order')), (snap) => {
+      setCategories(snap.docs.map(d => ({ id: d.id, ...d.data() } as Category)));
+    }, (error) => console.error("Error fetching categories", error));
 
-        const p = pSnap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
-        const c = cSnap.docs.map(d => ({ id: d.id, ...d.data() } as Category));
-        const r = rSnap.docs.map(d => {
-          const data = d.data() as Review;
-          return { id: d.id, ...data };
-        }).filter(rev => rev.isVisible);
-
-        setProducts(p); setCategories(c); setReviews(r);
-        
-        sessionStorage.setItem('bocado_menu_data', JSON.stringify({ p, c, r }));
-        sessionStorage.setItem('bocado_menu_time', Date.now().toString());
-      } catch (error) {
-        console.error("Error fetching static data", error);
-      }
-    };
-
-    fetchStaticData();
+    const unsubReviews = onSnapshot(query(collection(db, 'reviews'), orderBy('createdAt', 'desc'), limit(50)), (snap) => {
+      setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() } as Review)).filter(rev => rev.isVisible));
+    }, (error) => console.error("Error fetching reviews", error));
 
     const unsubSettings = onSnapshot(doc(db, 'settings', 'store'), (docSnap) => {
       if (docSnap.exists()) {
@@ -196,6 +169,9 @@ export default function Menu() {
     }
 
     return () => {
+      unsubProducts();
+      unsubCategories();
+      unsubReviews();
       unsubSettings();
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
@@ -214,7 +190,7 @@ export default function Menu() {
   const handleSubmitFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!feedbackData.customerName || !feedbackData.message) {
-      alert("Por favor completa los campos obligatorios");
+      showAlert("Campos incompletos", "Por favor completa los campos obligatorios");
       return;
     }
     setIsSubmittingFeedback(true);
@@ -224,12 +200,12 @@ export default function Menu() {
         status: 'unread',
         createdAt: new Date().toISOString()
       });
-      alert("¡Gracias por tu mensaje! Lo revisaremos pronto.");
+      showAlert("¡Mensaje enviado!", "¡Gracias por tu mensaje! Lo revisaremos pronto.", 'success');
       setIsFeedbackModalOpen(false);
       setFeedbackData({ customerName: '', customerPhone: '', message: '', type: 'sugerencia' });
     } catch (error) {
       console.error("Error submitting feedback", error);
-      alert("Hubo un error al enviar tu mensaje. Por favor intenta de nuevo.");
+      showAlert("Error", "Hubo un error al enviar tu mensaje. Por favor intenta de nuevo.");
     } finally {
       setIsSubmittingFeedback(false);
     }
@@ -429,13 +405,13 @@ export default function Menu() {
             errorMessage = "Se agotó el tiempo de espera para obtener la ubicación.";
           }
           
-          alert(`${errorMessage}\n\nSi no puedes activar el GPS, asegúrate de escribir tu dirección detallada y puntos de referencia.`);
+          showAlert("Ubicación", `${errorMessage}\n\nSi no puedes activar el GPS, asegúrate de escribir tu dirección detallada y puntos de referencia.`);
           setIsLocating(false);
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     } else {
-      alert("Tu navegador no soporta geolocalización. Por favor, ingresa tu dirección manualmente.");
+      showAlert("GPS no soportado", "Tu navegador no soporta geolocalización. Por favor, ingresa tu dirección manualmente.");
       setIsLocating(false);
     }
   };
@@ -485,17 +461,27 @@ export default function Menu() {
 
   const submitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (cart.length === 0) return alert("Tu carrito está vacío");
-    if (!customerName || !customerPhone) return alert("Por favor llena tu nombre y teléfono");
-    if (deliveryType === 'domicilio' && !customerAddress) return alert("Por favor ingresa tu dirección");
+    if (cart.length === 0) return showAlert("Carrito vacío", "Tu carrito está vacío");
+    if (!customerName || !customerPhone) return showAlert("Datos incompletos", "Por favor llena tu nombre y teléfono");
+    if (deliveryType === 'domicilio' && !customerAddress) return showAlert("Dirección faltante", "Por favor ingresa tu dirección");
+    
     // GPS is now optional but recommended
     if (deliveryType === 'domicilio' && !location) {
-      const confirmNoGPS = window.confirm("📍 No has compartido tu ubicación GPS. ¿Deseas continuar solo con la dirección escrita? (El GPS ayuda al repartidor a llegar más rápido)");
-      if (!confirmNoGPS) return;
+      showConfirm(
+        "📍 Sin GPS",
+        "No has compartido tu ubicación GPS. ¿Deseas continuar solo con la dirección escrita? (El GPS ayuda al repartidor a llegar más rápido)",
+        () => proceedWithOrder()
+      );
+      return;
     }
+
+    proceedWithOrder();
+  };
+
+  const proceedWithOrder = async () => {
     if (paymentMethod === 'efectivo') {
-      if (!cashAmount) return alert("Por favor indica con cuánto vas a pagar");
-      if (parseFloat(cashAmount) < cartTotal) return alert(`El monto a pagar debe ser mayor o igual al total del pedido (${formatPrice(cartTotal)})`);
+      if (!cashAmount) return showAlert("Pago en efectivo", "Por favor indica con cuánto vas a pagar");
+      if (parseFloat(cashAmount) < cartTotal) return showAlert("Monto insuficiente", `El monto a pagar debe ser mayor o igual al total del pedido (${formatPrice(cartTotal)})`);
     }
 
     setIsSubmitting(true);
@@ -637,7 +623,7 @@ export default function Menu() {
       
     } catch (error) {
       console.error("Error submitting order", error);
-      alert("Hubo un error al procesar tu pedido. Intenta de nuevo.");
+      showAlert("Error", "Hubo un error al procesar tu pedido. Intenta de nuevo.");
     } finally {
       setIsSubmitting(false);
     }
@@ -654,7 +640,7 @@ export default function Menu() {
 
   const submitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reviewText.trim()) return alert("Por favor escribe una reseña");
+    if (!reviewText.trim()) return showAlert("Reseña vacía", "Por favor escribe una reseña");
     
     setIsSubmittingReview(true);
     try {
@@ -665,7 +651,7 @@ export default function Menu() {
         isVisible: false, // Admin must approve
         createdAt: new Date().toISOString()
       });
-      alert("¡Gracias por tu reseña! La hemos recibido.");
+      showAlert("¡Gracias!", "¡Gracias por tu reseña! La hemos recibido.", 'success');
       setReviewText('');
       setReviewRating(5);
       
@@ -682,7 +668,7 @@ export default function Menu() {
       setLocation(null);
     } catch (error) {
       console.error("Error submitting review", error);
-      alert("Hubo un error al enviar tu reseña.");
+      showAlert("Error", "Hubo un error al enviar tu reseña.");
     } finally {
       setIsSubmittingReview(false);
     }
@@ -772,6 +758,8 @@ export default function Menu() {
     );
   }
 
+  const { showAlert, showConfirm } = useDialog();
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#1A1A1A] font-sans flex flex-col">
       {/* Header */}
@@ -785,11 +773,10 @@ export default function Menu() {
               {showInstallButton && (
                 <button 
                   onClick={handleInstallClick}
-                  className="p-2 bg-[#FDE047] hover:bg-[#FDE047]/80 rounded-full transition-colors text-[#1A1A1A] flex items-center gap-1 animate-pulse"
+                  className="p-2 bg-[#FDE047] hover:bg-[#FDE047]/80 rounded-full transition-colors text-[#1A1A1A]"
                   title="Instalar App"
                 >
                   <Download size={20} />
-                  <span className="text-xs font-bold hidden sm:inline">Instalar App</span>
                 </button>
               )}
               <button 
@@ -1010,10 +997,10 @@ export default function Menu() {
       {/* Floating Cart Button */}
       {cart.length > 0 && isStoreOpen && (
         <div className="fixed bottom-6 left-0 right-0 px-4 z-40 animate-in slide-in-from-bottom-10">
-          <div className="max-w-md mx-auto">
+          <div className="max-w-md mx-auto flex gap-2">
             <button 
               onClick={() => setIsCartOpen(true)}
-              className="w-full bg-[#E3242B] text-white p-4 rounded-2xl shadow-[0_8px_30px_rgba(227,36,43,0.4)] flex justify-between items-center font-bold text-lg active:scale-95 transition-transform"
+              className="flex-1 bg-[#E3242B] text-white p-4 rounded-2xl shadow-[0_8px_30px_rgba(227,36,43,0.4)] flex justify-between items-center font-bold text-lg active:scale-95 transition-transform"
             >
               <div className="flex items-center gap-3">
                 <div className="bg-white/20 w-8 h-8 rounded-full flex items-center justify-center text-sm">
@@ -1022,6 +1009,19 @@ export default function Menu() {
                 <span>Ver mi pedido</span>
               </div>
               <span>{formatPrice(cartTotal)}</span>
+            </button>
+            <button 
+              onClick={() => {
+                showConfirm(
+                  "¿Limpiar Pedido?",
+                  "Se eliminarán todos los productos que has seleccionado.",
+                  () => setCart([])
+                );
+              }}
+              className="bg-stone-800 text-white p-4 rounded-2xl shadow-lg active:scale-95 transition-transform flex items-center justify-center"
+              title="Limpiar pedido"
+            >
+              <X size={24} />
             </button>
           </div>
         </div>
@@ -1581,7 +1581,7 @@ export default function Menu() {
                         <button 
                           onClick={() => {
                             navigator.clipboard.writeText(`${window.location.origin}/?ref=${loyaltyCustomer.phone}`);
-                            alert("Link copiado!");
+                            showAlert("Copiado", "¡Link de referido copiado al portapapeles!", 'success');
                           }}
                           className="bg-[#1A1A1A] text-white text-xs px-3 rounded font-bold"
                         >

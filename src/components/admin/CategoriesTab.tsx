@@ -3,8 +3,10 @@ import { Plus, Edit2, Trash2, X, Save } from 'lucide-react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Category } from '../../types';
+import { useDialog } from '../../context/DialogContext';
 
 export default function CategoriesTab() {
+  const { showAlert, showConfirm } = useDialog();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingCategory, setEditingCategory] = useState<Partial<Category> | null>(null);
@@ -32,7 +34,7 @@ export default function CategoriesTab() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCategory?.name) {
-      alert("Por favor completa el nombre.");
+      showAlert("Campo incompleto", "Por favor completa el nombre.");
       return;
     }
 
@@ -52,19 +54,24 @@ export default function CategoriesTab() {
       setIsAdding(false);
     } catch (error) {
       console.error("Error saving category", error);
-      alert("Error al guardar la categoría");
+      showAlert("Error", "Error al guardar la categoría", 'error');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("¿Seguro que deseas eliminar esta categoría? Los productos asociados quedarán sin categoría visible.")) return;
-    try {
-      await deleteDoc(doc(db, 'categories', id));
-      alert("Categoría eliminada");
-    } catch (error) {
-      console.error("Error deleting category", error);
-      alert("Error al eliminar la categoría: Permiso denegado");
-    }
+    showConfirm(
+      "¿Eliminar Categoría?",
+      "¿Seguro que deseas eliminar esta categoría? Los productos asociados quedarán sin categoría visible.",
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'categories', id));
+          showAlert("Eliminada", "Categoría eliminada", 'success');
+        } catch (error) {
+          console.error("Error deleting category", error);
+          showAlert("Error", "Error al eliminar la categoría: Permiso denegado", 'error');
+        }
+      }
+    );
   };
 
   return (

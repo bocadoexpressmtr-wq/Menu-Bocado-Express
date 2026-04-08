@@ -4,8 +4,10 @@ import { updateDoc, doc, getDoc, deleteDoc, collection, query, where, getDocs, a
 import { db } from '../../firebase';
 import { Order, StoreSettings } from '../../types';
 import { cn } from '../../lib/utils';
+import { useDialog } from '../../context/DialogContext';
 
 export default function OrdersTab({ settings }: { settings: StoreSettings }) {
+  const { showAlert, showConfirm } = useDialog();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
@@ -59,36 +61,41 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
         }
 
         if (!meetsMinOrder && order.loyaltyOptIn) {
-          alert(`Pedido completado. No se asignó sello porque el total (${formatPrice(order.totalAmount)}) es menor al mínimo (${formatPrice(minOrder)}).`);
+          showAlert("Pedido Completado", `Pedido completado. No se asignó sello porque el total (${formatPrice(order.totalAmount)}) es menor al mínimo (${formatPrice(minOrder)}).`);
         } else {
-          alert("Pedido completado con éxito.");
+          showAlert("Éxito", "Pedido completado con éxito.", 'success');
         }
       }
     } catch (error) {
       console.error("Error updating order", error);
-      alert("Error al actualizar el pedido");
+      showAlert("Error", "Error al actualizar el pedido", 'error');
     }
   };
 
   const handleDelete = async (orderId: string) => {
-    if (!window.confirm("¿Estás seguro de que deseas eliminar este pedido definitivamente?")) return;
-    try {
-      await deleteDoc(doc(db, 'orders', orderId));
-      alert("Pedido eliminado");
-    } catch (error) {
-      console.error("Error deleting order", error);
-      alert("Error al eliminar el pedido: Permiso denegado o error de red.");
-    }
+    showConfirm(
+      "¿Eliminar Pedido?",
+      "¿Estás seguro de que deseas eliminar este pedido definitivamente?",
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'orders', orderId));
+          showAlert("Eliminado", "Pedido eliminado", 'success');
+        } catch (error) {
+          console.error("Error deleting order", error);
+          showAlert("Error", "Error al eliminar el pedido: Permiso denegado o error de red.", 'error');
+        }
+      }
+    );
   };
 
   const handleArchive = async (orderId: string, currentStatus: string) => {
     try {
       const newStatus = currentStatus === 'archived' ? 'completed' : 'archived';
       await updateDoc(doc(db, 'orders', orderId), { status: newStatus });
-      alert(newStatus === 'archived' ? "Pedido archivado" : "Pedido desarchivado");
+      showAlert(newStatus === 'archived' ? "Archivado" : "Desarchivado", newStatus === 'archived' ? "Pedido archivado" : "Pedido desarchivado", 'success');
     } catch (error) {
       console.error("Error archiving order", error);
-      alert("Error al procesar el archivo");
+      showAlert("Error", "Error al procesar el archivo", 'error');
     }
   };
 
@@ -107,33 +114,45 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
   };
 
   const bulkDelete = async () => {
-    if (!window.confirm(`¿Eliminar definitivamente los ${selectedOrders.length} pedidos seleccionados?`)) return;
-    const batch = writeBatch(db);
-    selectedOrders.forEach(id => {
-      batch.delete(doc(db, 'orders', id));
-    });
-    try {
-      await batch.commit();
-      setSelectedOrders([]);
-      alert("Pedidos eliminados");
-    } catch (error) {
-      console.error("Bulk delete error", error);
-    }
+    showConfirm(
+      "¿Eliminar Pedidos?",
+      `¿Eliminar definitivamente los ${selectedOrders.length} pedidos seleccionados?`,
+      async () => {
+        const batch = writeBatch(db);
+        selectedOrders.forEach(id => {
+          batch.delete(doc(db, 'orders', id));
+        });
+        try {
+          await batch.commit();
+          setSelectedOrders([]);
+          showAlert("Eliminados", "Pedidos eliminados", 'success');
+        } catch (error) {
+          console.error("Bulk delete error", error);
+          showAlert("Error", "Error al eliminar los pedidos", 'error');
+        }
+      }
+    );
   };
 
   const bulkArchive = async () => {
-    if (!window.confirm(`¿Archivar los ${selectedOrders.length} pedidos seleccionados?`)) return;
-    const batch = writeBatch(db);
-    selectedOrders.forEach(id => {
-      batch.update(doc(db, 'orders', id), { status: 'archived' });
-    });
-    try {
-      await batch.commit();
-      setSelectedOrders([]);
-      alert("Pedidos archivados");
-    } catch (error) {
-      console.error("Bulk archive error", error);
-    }
+    showConfirm(
+      "¿Archivar Pedidos?",
+      `¿Archivar los ${selectedOrders.length} pedidos seleccionados?`,
+      async () => {
+        const batch = writeBatch(db);
+        selectedOrders.forEach(id => {
+          batch.update(doc(db, 'orders', id), { status: 'archived' });
+        });
+        try {
+          await batch.commit();
+          setSelectedOrders([]);
+          showAlert("Archivados", "Pedidos archivados", 'success');
+        } catch (error) {
+          console.error("Bulk archive error", error);
+          showAlert("Error", "Error al archivar los pedidos", 'error');
+        }
+      }
+    );
   };
 
   const formatPrice = (price: number) => {

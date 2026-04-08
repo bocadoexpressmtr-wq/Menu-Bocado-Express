@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc, limit, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { LayoutDashboard, Package, ListOrdered, Settings, LogOut, MessageSquare, BarChart3, Gift, Tag } from 'lucide-react';
+import { useDialog } from '../context/DialogContext';
 import { Order, Product, Category, StoreSettings, Review, Customer } from '../types';
 import { auth } from '../firebase';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'firebase/auth';
@@ -16,6 +17,7 @@ import CouponsTab from '../components/admin/CouponsTab';
 import FeedbackTab from '../components/admin/FeedbackTab';
 
 export default function Admin() {
+  const { showAlert, showConfirm } = useDialog();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [settingsLoading, setSettingsLoading] = useState(true);
@@ -133,12 +135,12 @@ export default function Admin() {
       if (allowedEmails.includes(result.user.email || '')) {
         setIsAuthenticated(true);
       } else {
-        alert("Este correo no tiene permisos de administrador.");
+        showAlert("Acceso denegado", "Este correo no tiene permisos de administrador.", 'error');
         await auth.signOut();
       }
     } catch (error) {
       console.error("Error during Google login:", error);
-      alert("Error al iniciar sesión con Google.");
+      showAlert("Error", "Error al iniciar sesión con Google.", 'error');
     }
   };
 
@@ -170,91 +172,95 @@ export default function Admin() {
   }
 
   const seedDatabase = async () => {
-    if (!window.confirm("¿Estás seguro de que deseas cargar el menú de prueba de Bocado Express? Esto agregará categorías y productos automáticamente.")) return;
-    
-    setIsSeeding(true);
-    try {
-      const bocadoData = [
-        {
-          name: 'Suizos', order: 1, items: [
-            { name: 'Choripapa', description: 'Papa francesa, Chorizo, cebolla, ripio, queso rallado, salsa de la casa', price: 10000 },
-            { name: 'Suizo Clásico', description: 'Papa francesa, salchicha suiza, cebolla, ripio, queso rallado, salsa de la casa', price: 14000 },
-            { name: 'Chori-Suizo', description: 'Papa francesa, salchicha suiza, chorizo, cebolla, papa ripio, queso rallado, salsa de la casa', price: 16000 },
-            { name: 'Especial Costeño', description: 'Papa francesa, salchicha suiza, chorizo, tocineta ahumada, cebolla, ripio, queso rallado, queso frito en cubos, salsa de la casa', price: 20000 },
-          ]
-        },
-        {
-          name: 'Cubanos', order: 2, items: [
-            { name: 'Jamón y Queso', description: 'Pan, salsas, ripio, jamón, queso mozarella', price: 4000 },
-            { name: 'Hawaiano', description: 'Pan, salsas, ripio, jamón, piña, queso mozarella', price: 4000 },
-            { name: 'Tocino Maíz', description: 'Pan, salsas, ripio, tocino, maíz, queso mozarella', price: 4000 },
-            { name: 'Chorizo', description: 'Pan, salsas, ripio, chorizo, queso mozarella', price: 4000 },
-            { name: 'Suiza', description: 'Pan, salsas, ripio, suiza, queso mozarella', price: 4000 },
-            { name: 'Pollo', description: 'Pan, salsas, ripio, pollo, queso mozarella', price: 5000 },
-            { name: 'Carne', description: 'Pan, salsas, ripio, carne esmechada, queso mozarella', price: 5000 },
-          ]
-        },
-        {
-          name: 'Combos', order: 3, items: [
-            { name: 'Mini Bocado', description: '2 Cubanos + Gaseosa Postobon 250', price: 9000 },
-            { name: 'Bocado Enérgico', description: '2 Cubanos + Milo', price: 11000 },
-            { name: 'Bocado Completo', description: '2 Cubanos + Milo + Papas Chorreadas', price: 16000 },
-            { name: 'Bocado Doble', description: '4 Cubanos + 2 Gaseosa Coca-Cola 250', price: 20000 },
-            { name: 'Gran Bocado Postobon', description: '8 Cubanos + Econolitro Postobón 1 Litro', price: 34000 },
-            { name: 'Gran Bocado Coca-Cola', description: '8 Cubanos + Coca-Cola Tamaño 1.5', price: 36000 },
-          ]
-        },
-        {
-          name: 'Adiciones', order: 4, items: [
-            { name: 'Tocineta', description: 'Adición', price: 2000 },
-            { name: 'Queso Costeño Frito', description: 'Adición', price: 4000 },
-            { name: 'Carne Desmechada', description: 'Adición', price: 4000 },
-            { name: 'Pollo Desmechado', description: 'Adición', price: 4000 },
-            { name: 'Gratinado', description: 'Adición', price: 5000 },
-          ]
-        },
-        {
-          name: 'Bebidas y Extras', order: 5, items: [
-            { name: 'Agua Pequeña', description: 'Tamaño 300 ml', price: 1000 },
-            { name: 'Agua Grande', description: 'Tamaño 600 ml', price: 2000 },
-            { name: 'Jugo de Corozo', description: 'Tamaño 300 ml', price: 2000 },
-            { name: 'Postobon', description: 'Personal 250 ml', price: 2000 },
-            { name: 'Coca-Cola', description: 'Personal 250 ml', price: 3000 },
-            { name: 'Milo', description: '14 oz', price: 4000 },
-            { name: 'Jugo Hit', description: 'Personal 280 ml', price: 4000 },
-            { name: 'Econolitro', description: 'Postobon 1 Litro', price: 4000 },
-            { name: 'Papas', description: 'Sin salsas', price: 5000 },
-            { name: 'Papas Chorreadas', description: 'Salsa especial con tocineta picada', price: 6000 },
-            { name: 'Coca-Cola Grande', description: 'Tamaño 1.5', price: 7000 },
-          ]
-        }
-      ];
+    showConfirm(
+      "¿Cargar Menú de Prueba?",
+      "¿Estás seguro de que deseas cargar el menú de prueba de Bocado Express? Esto agregará categorías y productos automáticamente.",
+      async () => {
+        setIsSeeding(true);
+        try {
+          const bocadoData = [
+            {
+              name: 'Suizos', order: 1, items: [
+                { name: 'Choripapa', description: 'Papa francesa, Chorizo, cebolla, ripio, queso rallado, salsa de la casa', price: 10000 },
+                { name: 'Suizo Clásico', description: 'Papa francesa, salchicha suiza, cebolla, ripio, queso rallado, salsa de la casa', price: 14000 },
+                { name: 'Chori-Suizo', description: 'Papa francesa, salchicha suiza, chorizo, cebolla, papa ripio, queso rallado, salsa de la casa', price: 16000 },
+                { name: 'Especial Costeño', description: 'Papa francesa, salchicha suiza, chorizo, tocineta ahumada, cebolla, ripio, queso rallado, queso frito en cubos, salsa de la casa', price: 20000 },
+              ]
+            },
+            {
+              name: 'Cubanos', order: 2, items: [
+                { name: 'Jamón y Queso', description: 'Pan, salsas, ripio, jamón, queso mozarella', price: 4000 },
+                { name: 'Hawaiano', description: 'Pan, salsas, ripio, jamón, piña, queso mozarella', price: 4000 },
+                { name: 'Tocino Maíz', description: 'Pan, salsas, ripio, tocino, maíz, queso mozarella', price: 4000 },
+                { name: 'Chorizo', description: 'Pan, salsas, ripio, chorizo, queso mozarella', price: 4000 },
+                { name: 'Suiza', description: 'Pan, salsas, ripio, suiza, queso mozarella', price: 4000 },
+                { name: 'Pollo', description: 'Pan, salsas, ripio, pollo, queso mozarella', price: 5000 },
+                { name: 'Carne', description: 'Pan, salsas, ripio, carne esmechada, queso mozarella', price: 5000 },
+              ]
+            },
+            {
+              name: 'Combos', order: 3, items: [
+                { name: 'Mini Bocado', description: '2 Cubanos + Gaseosa Postobon 250', price: 9000 },
+                { name: 'Bocado Enérgico', description: '2 Cubanos + Milo', price: 11000 },
+                { name: 'Bocado Completo', description: '2 Cubanos + Milo + Papas Chorreadas', price: 16000 },
+                { name: 'Bocado Doble', description: '4 Cubanos + 2 Gaseosa Coca-Cola 250', price: 20000 },
+                { name: 'Gran Bocado Postobon', description: '8 Cubanos + Econolitro Postobón 1 Litro', price: 34000 },
+                { name: 'Gran Bocado Coca-Cola', description: '8 Cubanos + Coca-Cola Tamaño 1.5', price: 36000 },
+              ]
+            },
+            {
+              name: 'Adiciones', order: 4, items: [
+                { name: 'Tocineta', description: 'Adición', price: 2000 },
+                { name: 'Queso Costeño Frito', description: 'Adición', price: 4000 },
+                { name: 'Carne Desmechada', description: 'Adición', price: 4000 },
+                { name: 'Pollo Desmechado', description: 'Adición', price: 4000 },
+                { name: 'Gratinado', description: 'Adición', price: 5000 },
+              ]
+            },
+            {
+              name: 'Bebidas y Extras', order: 5, items: [
+                { name: 'Agua Pequeña', description: 'Tamaño 300 ml', price: 1000 },
+                { name: 'Agua Grande', description: 'Tamaño 600 ml', price: 2000 },
+                { name: 'Jugo de Corozo', description: 'Tamaño 300 ml', price: 2000 },
+                { name: 'Postobon', description: 'Personal 250 ml', price: 2000 },
+                { name: 'Coca-Cola', description: 'Personal 250 ml', price: 3000 },
+                { name: 'Milo', description: '14 oz', price: 4000 },
+                { name: 'Jugo Hit', description: 'Personal 280 ml', price: 4000 },
+                { name: 'Econolitro', description: 'Postobon 1 Litro', price: 4000 },
+                { name: 'Papas', description: 'Sin salsas', price: 5000 },
+                { name: 'Papas Chorreadas', description: 'Salsa especial con tocineta picada', price: 6000 },
+                { name: 'Coca-Cola Grande', description: 'Tamaño 1.5', price: 7000 },
+              ]
+            }
+          ];
 
-      for (const cat of bocadoData) {
-        const { addDoc } = await import('firebase/firestore');
-        const catRef = await addDoc(collection(db, 'categories'), {
-          name: cat.name,
-          order: cat.order
-        });
-        
-        for (const item of cat.items) {
-          await addDoc(collection(db, 'products'), {
-            name: item.name,
-            description: item.description,
-            price: item.price,
-            categoryId: catRef.id,
-            isAvailable: true,
-            imageUrl: ''
-          });
+          for (const cat of bocadoData) {
+            const { addDoc } = await import('firebase/firestore');
+            const catRef = await addDoc(collection(db, 'categories'), {
+              name: cat.name,
+              order: cat.order
+            });
+            
+            for (const item of cat.items) {
+              await addDoc(collection(db, 'products'), {
+                name: item.name,
+                description: item.description,
+                price: item.price,
+                categoryId: catRef.id,
+                isAvailable: true,
+                imageUrl: ''
+              });
+            }
+          }
+          showAlert("Éxito", "Menú cargado exitosamente!", 'success');
+        } catch (error) {
+          console.error("Error seeding database", error);
+          showAlert("Error", "Hubo un error al cargar el menú.", 'error');
+        } finally {
+          setIsSeeding(false);
         }
       }
-      alert("Menú cargado exitosamente!");
-    } catch (error) {
-      console.error("Error seeding database", error);
-      alert("Hubo un error al cargar el menú.");
-    } finally {
-      setIsSeeding(false);
-    }
+    );
   };
 
   return (

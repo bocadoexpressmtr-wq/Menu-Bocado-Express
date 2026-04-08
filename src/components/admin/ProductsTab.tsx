@@ -6,7 +6,10 @@ import { db, storage } from '../../firebase';
 import { cn } from '../../lib/utils';
 import { Product, Category } from '../../types';
 
+import { useDialog } from '../../context/DialogContext';
+
 export default function ProductsTab() {
+  const { showAlert, showConfirm } = useDialog();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,13 +76,13 @@ export default function ProductsTab() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert("Por favor selecciona un archivo de imagen válido.");
+      showAlert("Archivo inválido", "Por favor selecciona un archivo de imagen válido.", 'error');
       return;
     }
 
     // Validate file size (limit to 800KB for Firestore safety)
     if (file.size > 800 * 1024) {
-      alert("La imagen es demasiado grande. Por favor selecciona una menor a 800KB.");
+      showAlert("Imagen muy pesada", "La imagen es demasiado grande. Por favor selecciona una menor a 800KB.", 'error');
       return;
     }
 
@@ -100,7 +103,7 @@ export default function ProductsTab() {
       setUploadProgress(0);
     };
     reader.onerror = () => {
-      alert("Error al leer el archivo.");
+      showAlert("Error", "Error al leer el archivo.", 'error');
       setIsUploading(false);
     };
     reader.readAsDataURL(file);
@@ -109,7 +112,7 @@ export default function ProductsTab() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct?.name || !editingProduct?.price || !editingProduct?.categoryId) {
-      alert("Por favor completa los campos requeridos.");
+      showAlert("Campos incompletos", "Por favor completa los campos requeridos.");
       return;
     }
 
@@ -134,19 +137,24 @@ export default function ProductsTab() {
       setIsAdding(false);
     } catch (error) {
       console.error("Error saving product", error);
-      alert("Error al guardar el producto");
+      showAlert("Error", "Error al guardar el producto", 'error');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("¿Seguro que deseas eliminar este producto?")) return;
-    try {
-      await deleteDoc(doc(db, 'products', id));
-      alert("Producto eliminado");
-    } catch (error) {
-      console.error("Error deleting product", error);
-      alert("Error al eliminar el producto: Permiso denegado");
-    }
+    showConfirm(
+      "¿Eliminar Producto?",
+      "¿Seguro que deseas eliminar este producto?",
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'products', id));
+          showAlert("Eliminado", "Producto eliminado", 'success');
+        } catch (error) {
+          console.error("Error deleting product", error);
+          showAlert("Error", "Error al eliminar el producto: Permiso denegado", 'error');
+        }
+      }
+    );
   };
 
   return (

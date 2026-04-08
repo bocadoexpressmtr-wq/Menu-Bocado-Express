@@ -4,7 +4,10 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, order
 import { db } from '../../firebase';
 import { Review } from '../../types';
 
+import { useDialog } from '../../context/DialogContext';
+
 export default function ReviewsTab() {
+  const { showAlert, showConfirm } = useDialog();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingReview, setEditingReview] = useState<Partial<Review> | null>(null);
@@ -27,7 +30,7 @@ export default function ReviewsTab() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingReview?.customerName || !editingReview?.text || !editingReview?.rating) {
-      alert("Por favor completa todos los campos.");
+      showAlert("Campos incompletos", "Por favor completa todos los campos.");
       return;
     }
 
@@ -52,7 +55,7 @@ export default function ReviewsTab() {
       setIsAdding(false);
     } catch (error) {
       console.error("Error saving review", error);
-      alert("Error al guardar la reseña");
+      showAlert("Error", "Error al guardar la reseña", 'error');
     }
   };
 
@@ -63,19 +66,24 @@ export default function ReviewsTab() {
       });
     } catch (error) {
       console.error("Error toggling visibility", error);
-      alert("Error al cambiar la visibilidad");
+      showAlert("Error", "Error al cambiar la visibilidad", 'error');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("¿Seguro que deseas eliminar esta reseña?")) return;
-    try {
-      await deleteDoc(doc(db, 'reviews', id));
-      alert("Reseña eliminada");
-    } catch (error) {
-      console.error("Error deleting review", error);
-      alert("Error al eliminar la reseña: Permiso denegado");
-    }
+    showConfirm(
+      "¿Eliminar Reseña?",
+      "¿Seguro que deseas eliminar esta reseña?",
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'reviews', id));
+          showAlert("Eliminada", "Reseña eliminada", 'success');
+        } catch (error) {
+          console.error("Error deleting review", error);
+          showAlert("Error", "Error al eliminar la reseña: Permiso denegado", 'error');
+        }
+      }
+    );
   };
 
   return (

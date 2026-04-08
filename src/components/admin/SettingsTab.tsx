@@ -4,8 +4,10 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { StoreSettings, SocialLink } from '../../types';
 import { cn } from '../../lib/utils';
+import { useDialog } from '../../context/DialogContext';
 
 export default function SettingsTab({ settings }: { settings: StoreSettings }) {
+  const { showAlert, showConfirm } = useDialog();
   const [editingSettings, setEditingSettings] = useState<StoreSettings>(settings);
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -30,7 +32,7 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error("Error saving settings", error);
-      alert("Error al guardar la configuración");
+      showAlert("Error", "Error al guardar la configuración", 'error');
     } finally {
       setIsSaving(false);
     }
@@ -368,8 +370,13 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
             <button 
               type="button"
               onClick={async () => {
-                if (!window.confirm("¿Estás seguro de que deseas eliminar TODOS los pedidos entregados con más de 30 días?")) return;
-                alert("Estrategia de limpieza: En producción, esto ejecutaría una consulta para buscar pedidos con status 'completed' y createdAt < (Date.now() - 30 días) y los eliminaría.");
+                showConfirm(
+                  "¿Limpiar Historial?",
+                  "¿Estás seguro de que deseas eliminar TODOS los pedidos entregados con más de 30 días?",
+                  () => {
+                    showAlert("Información", "Estrategia de limpieza: En producción, esto ejecutaría una consulta para buscar pedidos con status 'completed' y createdAt < (Date.now() - 30 días) y los eliminaría.");
+                  }
+                );
               }}
               className="w-full md:w-auto bg-red-50 text-red-600 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-100 transition-all flex items-center justify-center gap-2"
             >

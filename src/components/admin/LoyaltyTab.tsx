@@ -4,12 +4,14 @@ import { db } from '../../firebase';
 import { cn } from '../../lib/utils';
 import { Customer, StoreSettings } from '../../types';
 import { Gift, Users, Search, Plus, Minus, Trash2, ToggleLeft, ToggleRight, Save, Loader2, Trophy, Star, UserPlus, CheckCircle } from 'lucide-react';
+import { useDialog } from '../../context/DialogContext';
 
 interface LoyaltyTabProps {
   settings: StoreSettings;
 }
 
 export default function LoyaltyTab({ settings }: LoyaltyTabProps) {
+  const { showAlert, showConfirm } = useDialog();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -72,7 +74,7 @@ export default function LoyaltyTab({ settings }: LoyaltyTabProps) {
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error("Error saving loyalty settings:", error);
-      alert("Error al guardar la configuración.");
+      showAlert("Error", "Error al guardar la configuración.", 'error');
     } finally {
       setIsSaving(false);
     }
@@ -90,14 +92,19 @@ export default function LoyaltyTab({ settings }: LoyaltyTabProps) {
   };
 
   const deleteCustomer = async (customerId: string) => {
-    if (!window.confirm("¿Estás seguro de que deseas eliminar este cliente? Se perderán todos sus sellos.")) return;
-    try {
-      await deleteDoc(doc(db, 'customers', customerId));
-      alert("Cliente eliminado");
-    } catch (error) {
-      console.error("Error deleting customer:", error);
-      alert("Error al eliminar el cliente: Permiso denegado");
-    }
+    showConfirm(
+      "¿Eliminar Cliente?",
+      "¿Estás seguro de que deseas eliminar este cliente? Se perderán todos sus sellos.",
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'customers', customerId));
+          showAlert("Eliminado", "Cliente eliminado", 'success');
+        } catch (error) {
+          console.error("Error deleting customer:", error);
+          showAlert("Error", "Error al eliminar el cliente: Permiso denegado", 'error');
+        }
+      }
+    );
   };
 
   const filteredCustomers = customers.filter(c => 

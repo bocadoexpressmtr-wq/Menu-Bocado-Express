@@ -3,8 +3,10 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, order
 import { db } from '../../firebase';
 import { Coupon } from '../../types';
 import { Plus, Edit2, Trash2, X, Check, Tag } from 'lucide-react';
+import { useDialog } from '../../context/DialogContext';
 
 export default function CouponsTab() {
+  const { showAlert, showConfirm } = useDialog();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -44,19 +46,24 @@ export default function CouponsTab() {
       resetForm();
     } catch (error) {
       console.error("Error saving coupon:", error);
-      alert("Error al guardar el cupón");
+      showAlert("Error", "Error al guardar el cupón", 'error');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("¿Seguro que deseas eliminar este cupón?")) return;
-    try {
-      await deleteDoc(doc(db, 'coupons', id));
-      alert("Cupón eliminado");
-    } catch (error) {
-      console.error("Error deleting coupon", error);
-      alert("Error al eliminar el cupón: Permiso denegado");
-    }
+    showConfirm(
+      "¿Eliminar Cupón?",
+      "¿Seguro que deseas eliminar este cupón?",
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'coupons', id));
+          showAlert("Eliminado", "Cupón eliminado", 'success');
+        } catch (error) {
+          console.error("Error deleting coupon", error);
+          showAlert("Error", "Error al eliminar el cupón: Permiso denegado", 'error');
+        }
+      }
+    );
   };
 
   const toggleActive = async (coupon: Coupon) => {

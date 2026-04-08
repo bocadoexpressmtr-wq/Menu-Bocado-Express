@@ -1,7 +1,0 @@
-{
-  "name": "Bocado Express",
-  "description": "Plataforma de pedidos con menú digital, integración con WhatsApp y panel de administración.",
-  "requestFramePermissions": [
-    "geolocation"
-  ]
-}

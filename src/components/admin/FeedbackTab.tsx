@@ -4,8 +4,10 @@ import { db } from '../../firebase';
 import { Feedback } from '../../types';
 import { Trash2, MessageSquare, CheckCircle, Clock, Phone, User, Inbox, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useDialog } from '../../context/DialogContext';
 
 export default function FeedbackTab() {
+  const { showAlert, showConfirm } = useDialog();
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,13 +25,19 @@ export default function FeedbackTab() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("¿Estás seguro de que deseas eliminar este mensaje? Esta acción no se puede deshacer.")) return;
-    try {
-      await deleteDoc(doc(db, 'feedback', id));
-    } catch (error) {
-      console.error("Error deleting feedback", error);
-      alert("Error al eliminar el mensaje");
-    }
+    showConfirm(
+      "¿Eliminar Mensaje?",
+      "¿Estás seguro de que deseas eliminar este mensaje? Esta acción no se puede deshacer.",
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'feedback', id));
+          showAlert("Eliminado", "Mensaje eliminado", 'success');
+        } catch (error) {
+          console.error("Error deleting feedback", error);
+          showAlert("Error", "Error al eliminar el mensaje", 'error');
+        }
+      }
+    );
   };
 
   const toggleRead = async (id: string, currentStatus: string) => {
