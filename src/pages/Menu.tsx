@@ -236,7 +236,10 @@ export default function Menu() {
   const isStoreOpen = isCurrentlyOpen();
 
   const addToCart = (product: Product) => {
-    if (!isStoreOpen) return;
+    if (!isStoreOpen) {
+      showAlert("Local Cerrado", "En este momento no estamos recibiendo pedidos, pero échale un ojo a nuestro menú para ir antojándote.");
+      return;
+    }
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -894,7 +897,7 @@ export default function Menu() {
 
       {/* Store Closed Banner */}
       {!isStoreOpen && (
-        <div className="bg-stone-800 text-white text-center py-3 px-4 sticky top-[185px] z-20 text-sm font-medium flex items-center justify-center gap-2">
+        <div className="bg-red-500 text-white text-center py-3 px-4 sticky top-[185px] z-20 text-sm font-bold flex items-center justify-center gap-2 shadow-md">
           <span>😴</span> En este momento estamos cerrados, pero échale un ojo a nuestro menú para ir antojándote.
         </div>
       )}
@@ -1807,10 +1810,14 @@ export default function Menu() {
 // Sub-component for Product Card to keep code clean
 function ProductCard({ product, addToCart, isStoreOpen }: { product: Product, addToCart: (p: Product) => void, isStoreOpen: boolean, key?: string | number }) {
   const [added, setAdded] = useState(false);
+  const { showAlert } = useDialog();
 
   const handleAdd = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (!isStoreOpen) return;
+    if (!isStoreOpen) {
+      showAlert("Local Cerrado", "En este momento no estamos recibiendo pedidos, pero échale un ojo a nuestro menú para ir antojándote.");
+      return;
+    }
     addToCart(product);
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
@@ -1821,7 +1828,8 @@ function ProductCard({ product, addToCart, isStoreOpen }: { product: Product, ad
       onClick={handleAdd}
       className={cn(
         "bg-white rounded-3xl p-4 shadow-sm border border-stone-100 flex gap-4 transition-all hover:shadow-md relative overflow-hidden cursor-pointer active:scale-[0.98]",
-        added && "ring-2 ring-emerald-500 ring-inset"
+        added && "ring-2 ring-emerald-500 ring-inset",
+        !isStoreOpen && "opacity-80"
       )}
     >
       {added && (
@@ -1848,6 +1856,11 @@ function ProductCard({ product, addToCart, isStoreOpen }: { product: Product, ad
         ) : (
           <div className="w-full h-full bg-stone-100 rounded-2xl flex items-center justify-center text-stone-300">
             <UtensilsCrossed size={32} />
+          </div>
+        )}
+        {!isStoreOpen && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] rounded-2xl flex items-center justify-center">
+            <span className="bg-stone-900 text-white text-[9px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded-lg shadow-xl">Cerrado</span>
           </div>
         )}
       </div>
