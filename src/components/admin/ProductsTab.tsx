@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, DatabaseZap, X, Save, Upload, Loader2, Package } from 'lucide-react';
+import { Plus, Edit2, Trash2, DatabaseZap, X, Save, Upload, Loader2, Package, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase';
@@ -14,6 +14,9 @@ export default function ProductsTab() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let productsLoaded = false;
@@ -57,6 +60,17 @@ export default function ProductsTab() {
     setEditingProduct(null);
     setIsAdding(false);
   };
+
+  const toggleCategory = (catId: string) => {
+    setCollapsedCategories(prev => ({ ...prev, [catId]: !prev[catId] }));
+  };
+
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         p.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || p.categoryId === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   if (loading && products.length === 0) return <div className="p-8 text-center text-stone-500 font-medium">Cargando productos...</div>;
 
@@ -159,17 +173,43 @@ export default function ProductsTab() {
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
           <h2 className="text-3xl font-black text-stone-900 tracking-tight">Menú de Productos</h2>
           <p className="text-stone-500 text-sm">Gestiona los platos y bebidas de tu restaurante</p>
         </div>
         <button 
-          onClick={() => { setIsAdding(true); setEditingProduct({ isAvailable: true }); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} 
+          onClick={() => { setIsAdding(true); setEditingProduct({ isAvailable: true }); }} 
           className="w-full md:w-auto bg-stone-900 text-white px-6 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-stone-800 text-sm font-black uppercase tracking-wider shadow-lg shadow-stone-200 transition-all active:scale-95"
         >
           <Plus size={18} /> Nuevo Producto
         </button>
+      </div>
+
+      {/* Filters Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-8">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
+          <input 
+            type="text"
+            placeholder="Buscar producto..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-4 py-4 bg-white border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm shadow-sm"
+          />
+        </div>
+        <div className="relative min-w-[200px]">
+          <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
+          <select 
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="w-full pl-12 pr-10 py-4 bg-white border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-bold text-sm shadow-sm appearance-none"
+          >
+            <option value="all">Todas las categorías</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={16} />
+        </div>
       </div>
 
       {(isAdding || editingProduct) && (
@@ -289,60 +329,87 @@ export default function ProductsTab() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        {products.map(product => (
-          <div key={product.id} className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden group hover:shadow-lg hover:shadow-stone-200/30 transition-all duration-300 flex flex-col">
-            <div className="relative h-32 md:h-40 overflow-hidden">
-              {product.imageUrl ? (
-                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-              ) : (
-                <div className="w-full h-full bg-stone-50 flex items-center justify-center text-stone-200">
-                  <Package size={32} />
+      <div className="space-y-8">
+        {categories.map(category => {
+          const categoryProducts = filteredProducts.filter(p => p.categoryId === category.id);
+          if (categoryProducts.length === 0 && selectedCategory !== 'all') return null;
+          if (categoryProducts.length === 0 && searchTerm) return null;
+          
+          const isCollapsed = collapsedCategories[category.id];
+
+          return (
+            <div key={category.id} className="space-y-4">
+              <button 
+                onClick={() => toggleCategory(category.id)}
+                className="flex items-center gap-3 w-full text-left group"
+              >
+                <div className="bg-stone-100 p-2 rounded-lg text-stone-400 group-hover:bg-stone-900 group-hover:text-white transition-all">
+                  {isCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </div>
+                <h3 className="text-lg font-black text-stone-900 uppercase tracking-tight flex items-center gap-2">
+                  {category.name}
+                  <span className="text-[10px] bg-stone-100 text-stone-400 px-2 py-0.5 rounded-full font-black">
+                    {categoryProducts.length}
+                  </span>
+                </h3>
+                <div className="flex-1 h-px bg-stone-100" />
+              </button>
+
+              {!isCollapsed && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  {categoryProducts.map(product => (
+                    <div key={product.id} className="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden group hover:shadow-md hover:shadow-stone-200/30 transition-all duration-300 flex flex-col">
+                      <div className="relative h-20 md:h-24 overflow-hidden">
+                        {product.imageUrl ? (
+                          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                        ) : (
+                          <div className="w-full h-full bg-stone-50 flex items-center justify-center text-stone-200">
+                            <Package size={20} />
+                          </div>
+                        )}
+                        <div className="absolute top-1 right-1 flex flex-col gap-1">
+                          {product.isDailyOffer && <span className="bg-red-500 text-white text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full shadow-lg">Oferta</span>}
+                          {product.isPopular && <span className="bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full shadow-lg">Popular</span>}
+                        </div>
+                        {!product.isAvailable && (
+                          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
+                            <span className="bg-stone-900 text-white text-[9px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded-lg shadow-xl">Agotado</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="p-2 flex-1 flex flex-col">
+                        <div className="flex justify-between items-start mb-1">
+                          <h3 className="text-xs font-black text-stone-900 leading-tight line-clamp-1">{product.name}</h3>
+                          <p className="text-[10px] font-black text-emerald-600 shrink-0">${product.price.toLocaleString()}</p>
+                        </div>
+                        
+                        <div className="flex items-center justify-between pt-1.5 border-t border-stone-50 mt-auto">
+                          <div className="flex items-center gap-1">
+                            <div className={cn("w-1.5 h-1.5 rounded-full", product.isAvailable ? "bg-emerald-500" : "bg-red-500")} />
+                            <span className="text-[8px] font-black text-stone-400 uppercase tracking-wider">{product.isAvailable ? 'Activo' : 'Inactivo'}</span>
+                          </div>
+                          <div className="flex items-center gap-0.5">
+                            <button onClick={() => { setIsAdding(false); setEditingProduct(product); }} className="p-1.5 text-stone-400 hover:text-stone-900 hover:bg-stone-50 rounded-lg transition-all active:scale-90"><Edit2 size={12} /></button>
+                            <button onClick={() => handleDelete(product.id)} className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all active:scale-90"><Trash2 size={12} /></button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
-              <div className="absolute top-2 right-2 flex flex-col gap-1">
-                {product.isDailyOffer && <span className="bg-red-500 text-white text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full shadow-lg">Oferta</span>}
-                {product.isPopular && <span className="bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full shadow-lg">Popular</span>}
-              </div>
-              {!product.isAvailable && (
-                <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
-                  <span className="bg-stone-900 text-white text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-lg shadow-xl">Agotado</span>
-                </div>
-              )}
             </div>
-            
-            <div className="p-4 flex-1 flex flex-col">
-              <div className="flex justify-between items-start mb-1">
-                <div>
-                  <p className="text-[8px] font-black text-stone-400 uppercase tracking-widest mb-0.5">
-                    {categories.find(c => c.id === product.categoryId)?.name || 'Sin Categoría'}
-                  </p>
-                  <h3 className="text-base font-black text-stone-900 leading-tight line-clamp-1">{product.name}</h3>
-                </div>
-                <p className="text-sm font-black text-emerald-600 shrink-0">${product.price.toLocaleString()}</p>
-              </div>
-              
-              <p className="text-stone-500 text-[10px] font-medium line-clamp-2 mb-3 flex-1 h-8">{product.description || 'Sin descripción disponible.'}</p>
-              
-              <div className="flex items-center justify-between pt-3 border-t border-stone-50">
-                <div className="flex items-center gap-1.5">
-                  <div className={cn("w-1.5 h-1.5 rounded-full", product.isAvailable ? "bg-emerald-500" : "bg-red-500")} />
-                  <span className="text-[9px] font-black text-stone-400 uppercase tracking-wider">{product.isAvailable ? 'Activo' : 'Inactivo'}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={() => { setIsAdding(false); setEditingProduct(product); }} className="p-2.5 text-stone-400 hover:text-stone-900 hover:bg-stone-50 rounded-xl transition-all active:scale-90"><Edit2 size={18} /></button>
-                  <button onClick={() => handleDelete(product.id)} className="p-2.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all active:scale-90"><Trash2 size={18} /></button>
-                </div>
-              </div>
+          );
+        })}
+
+        {filteredProducts.length === 0 && (
+          <div className="bg-white rounded-2xl border border-stone-100 p-12 text-center">
+            <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center text-stone-200 mx-auto mb-4">
+              <Package size={32} />
             </div>
-          </div>
-        ))}
-        {products.length === 0 && (
-          <div className="col-span-full bg-white rounded-2xl border border-stone-100 p-8 text-center">
-            <div className="w-12 h-12 bg-stone-50 rounded-full flex items-center justify-center text-stone-200 mx-auto mb-4">
-              <Package size={24} />
-            </div>
-            <p className="text-stone-400 font-medium text-sm">No hay productos en el menú. ¡Empieza agregando uno!</p>
+            <p className="text-stone-400 font-medium text-sm">No se encontraron productos.</p>
+            <button onClick={() => { setSearchTerm(''); setSelectedCategory('all'); }} className="text-stone-900 font-bold mt-2 underline text-xs">Limpiar filtros</button>
           </div>
         )}
       </div>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { Order, Product, Customer } from '../../types';
-import { DollarSign, ShoppingBag, TrendingUp, Package, Users, Receipt, Trophy, Clock } from 'lucide-react';
+import { Order, Product, Customer, StoreSettings } from '../../types';
+import { DollarSign, ShoppingBag, TrendingUp, Package, Users, Receipt, Trophy, Clock, Calendar, Trash2, AlertTriangle, ChevronDown, Loader2 } from 'lucide-react';
+import { useDialog } from '../../context/DialogContext';
 import { 
   BarChart, 
   Bar, 
@@ -15,13 +16,15 @@ import {
   PieChart,
   Pie
 } from 'recharts';
-import { StoreSettings } from '../../types';
 
 export default function DashboardTab({ settings }: { settings: StoreSettings }) {
+  const { showAlert, showConfirm } = useDialog();
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<'today' | 'yesterday' | '7d' | '30d' | 'all'>('7d');
+  const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
     let ordersLoaded = false;
@@ -73,7 +76,35 @@ export default function DashboardTab({ settings }: { settings: StoreSettings }) 
 
   if (loading && orders.length === 0) return <div className="p-8 text-center text-stone-500">Cargando estadísticas...</div>;
 
-  const completedOrders = orders.filter(o => o.status === 'completed');
+  const completedOrders = orders.filter(o => {
+    if (o.status !== 'completed') return false;
+    
+    const orderDate = new Date(o.createdAt);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (dateRange) {
+      case 'today':
+        return orderDate >= today;
+      case 'yesterday':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return orderDate >= yesterday && orderDate < today;
+      case '7d':
+        const last7 = new Date(today);
+        last7.setDate(last7.getDate() - 7);
+        return orderDate >= last7;
+      case '30d':
+        const last30 = new Date(today);
+        last30.setDate(last30.getDate() - 30);
+        return orderDate >= last30;
+      case 'all':
+        return true;
+      default:
+        return true;
+    }
+  });
+
   const totalSales = completedOrders.reduce((sum, o) => sum + o.totalAmount, 0);
   const totalOrders = completedOrders.length;
   const averageTicket = totalOrders > 0 ? totalSales / totalOrders : 0;
@@ -97,14 +128,17 @@ export default function DashboardTab({ settings }: { settings: StoreSettings }) 
     .sort((a, b) => b.quantity - a.quantity)
     .slice(0, 5);
 
-  // Sales by day (last 7 days)
-  const last7Days = [...Array(7)].map((_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }).reverse();
+  // Sales by day (based on selected range)
+  const getDaysArray = () => {
+    const days = dateRange === '30d' ? 30 : dateRange === 'all' ? 30 : 7;
+    return [...Array(days)].map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }).reverse();
+  };
 
-  const salesData = last7Days.map(date => {
+  const salesData = getDaysArray().map(date => {
     const dayOrders = completedOrders.filter(o => {
       const orderDate = new Date(o.createdAt);
       const localDateStr = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}-${String(orderDate.getDate()).padStart(2, '0')}`;
@@ -133,16 +167,58 @@ export default function DashboardTab({ settings }: { settings: StoreSettings }) 
     }).format(price);
   };
 
+  const handleResetData = () => {
+    showConfirm(
+      "¿RESETEAR DATOS DE PRUEBA?",
+      "Esta acción eliminará TODOS los pedidos y clientes registrados. Los productos y categorías NO se verán afectados. Esta acción no se puede deshacer.",
+      async () => {
+        setIsResetting(true);
+        try {
+          const batch = writeBatch(db);
+          
+          // Delete all orders
+          const ordersSnap = await getDocs(collection(db, 'orders'));
+          ordersSnap.docs.forEach(d => batch.delete(d.ref));
+          
+          // Delete all customers
+          const customersSnap = await getDocs(collection(db, 'customers'));
+          customersSnap.docs.forEach(d => batch.delete(d.ref));
+          
+          await batch.commit();
+          showAlert("Éxito", "Todos los datos de prueba han sido eliminados.", 'success');
+        } catch (error) {
+          console.error("Error resetting data:", error);
+          showAlert("Error", "No se pudieron eliminar los datos.", 'error');
+        } finally {
+          setIsResetting(false);
+        }
+      }
+    );
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h2 className="text-3xl font-black text-stone-900 tracking-tight">Análisis y Reportes</h2>
           <p className="text-stone-500 text-sm">Resumen del rendimiento de tu negocio</p>
         </div>
-        <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-stone-200 flex items-center gap-2 text-stone-600 text-sm font-medium">
-          <Clock size={16} />
-          Últimos 7 días
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="relative flex-1 md:flex-none">
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={16} />
+            <select 
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value as any)}
+              className="w-full md:w-auto pl-10 pr-8 py-2.5 bg-white border border-stone-200 rounded-xl shadow-sm text-sm font-bold text-stone-600 appearance-none focus:ring-2 focus:ring-stone-900 outline-none transition-all"
+            >
+              <option value="today">Hoy</option>
+              <option value="yesterday">Ayer</option>
+              <option value="7d">Últimos 7 días</option>
+              <option value="30d">Últimos 30 días</option>
+              <option value="all">Todo el tiempo</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={14} />
+          </div>
         </div>
       </div>
 
@@ -277,8 +353,8 @@ export default function DashboardTab({ settings }: { settings: StoreSettings }) 
               <h3 className="text-lg font-bold text-stone-900">Más Vendidos</h3>
             </div>
           </div>
-          <div className="p-0">
-            <table className="w-full text-left text-sm">
+          <div className="p-0 overflow-x-auto">
+            <table className="w-full text-left text-sm min-w-[400px]">
               <thead className="bg-stone-50/50 text-stone-400 border-b border-stone-50">
                 <tr>
                   <th className="px-6 py-4 font-bold uppercase text-[10px] tracking-widest">Producto</th>
@@ -357,6 +433,29 @@ export default function DashboardTab({ settings }: { settings: StoreSettings }) 
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Danger Zone / Reset */}
+      <div className="mt-12 pt-12 border-t border-stone-100">
+        <div className="bg-red-50 rounded-[2.5rem] p-8 border border-red-100 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4 text-center md:text-left">
+            <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center text-red-500 shadow-sm">
+              <AlertTriangle size={32} />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-red-900 uppercase tracking-tight">Zona de Mantenimiento</h3>
+              <p className="text-red-600/70 text-sm font-medium">Limpia los datos de prueba antes del lanzamiento real</p>
+            </div>
+          </div>
+          <button 
+            onClick={handleResetData}
+            disabled={isResetting}
+            className="w-full md:w-auto bg-red-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-red-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-red-200"
+          >
+            {isResetting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+            Resetear Datos de Prueba
+          </button>
         </div>
       </div>
     </div>

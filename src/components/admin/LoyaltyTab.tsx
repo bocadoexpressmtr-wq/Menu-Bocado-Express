@@ -3,7 +3,7 @@ import { doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, collection, order
 import { db } from '../../firebase';
 import { cn } from '../../lib/utils';
 import { Customer, StoreSettings } from '../../types';
-import { Gift, Users, Search, Plus, Minus, Trash2, ToggleLeft, ToggleRight, Save, Loader2, Trophy, Star, UserPlus, CheckCircle } from 'lucide-react';
+import { Gift, Users, Search, Plus, Minus, Trash2, ToggleLeft, ToggleRight, Save, Loader2, Trophy, Star, UserPlus, CheckCircle, MessageCircle, Copy } from 'lucide-react';
 import { useDialog } from '../../context/DialogContext';
 
 interface LoyaltyTabProps {
@@ -111,6 +111,14 @@ export default function LoyaltyTab({ settings }: LoyaltyTabProps) {
     (c.phone && c.phone.includes(searchTerm)) || 
     (c.name && c.name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const copyAllPhones = () => {
+    const phones = filteredCustomers.map(c => c.phone).filter(Boolean).join(', ');
+    if (!phones) return showAlert("Sin datos", "No hay números de teléfono para copiar.");
+    
+    navigator.clipboard.writeText(phones);
+    showAlert("Copiado", "Todos los números han sido copiados al portapapeles.", 'success');
+  };
 
   return (
     <div className="space-y-8 pb-20">
@@ -259,15 +267,24 @@ export default function LoyaltyTab({ settings }: LoyaltyTabProps) {
               <p className="text-stone-400 text-[10px] font-black uppercase tracking-widest">{customers.length} Usuarios en total</p>
             </div>
           </div>
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
-            <input 
-              type="text"
-              placeholder="Buscar por nombre o teléfono..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm"
-            />
+          <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+            <button 
+              onClick={copyAllPhones}
+              className="w-full md:w-auto bg-stone-100 text-stone-600 px-5 py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-stone-200 transition-all font-bold text-sm"
+              title="Copiar todos los teléfonos para difusión"
+            >
+              <Copy size={18} /> Difusión Masiva
+            </button>
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
+              <input 
+                type="text"
+                placeholder="Buscar por nombre o teléfono..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm"
+              />
+            </div>
           </div>
         </div>
 
@@ -350,13 +367,24 @@ export default function LoyaltyTab({ settings }: LoyaltyTabProps) {
                     </div>
                   </td>
                   <td className="px-8 py-6 text-right">
-                    <button 
-                      onClick={() => deleteCustomer(customer.id!)}
-                      className="p-3 text-stone-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all active:scale-90"
-                      title="Eliminar Cliente"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <a 
+                        href={`https://wa.me/${customer.phone?.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-3 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all active:scale-90"
+                        title="Escribir por WhatsApp"
+                      >
+                        <MessageCircle size={18} />
+                      </a>
+                      <button 
+                        onClick={() => deleteCustomer(customer.id!)}
+                        className="p-3 text-stone-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all active:scale-90"
+                        title="Eliminar Cliente"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

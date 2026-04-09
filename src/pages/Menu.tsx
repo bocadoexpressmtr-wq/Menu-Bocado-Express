@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, onSnapshot, query, orderBy, addDoc, doc, getDoc, setDoc, getDocs, where, limit } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ShoppingCart, MapPin, Send, Plus, Minus, Trash2, CheckCircle2, Instagram, Facebook, Music2, Gift, Info, X, Store, Bike, UtensilsCrossed, Wallet, Banknote, PartyPopper, Star, Share2, Globe, MessageCircle, Youtube, Twitter, Tag, Download, MessageSquare } from 'lucide-react';
+import { ShoppingCart, MapPin, Send, Plus, Minus, Trash2, CheckCircle2, Instagram, Facebook, Music2, Gift, Info, X, Store, Bike, UtensilsCrossed, Wallet, Banknote, PartyPopper, Star, Share2, Globe, MessageCircle, Youtube, Twitter, Tag, Download, MessageSquare, Search } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Product, Category, CartItem, DeliveryType, PaymentMethod, StoreSettings, Customer, Review, Coupon } from '../types';
 import { useDialog } from '../context/DialogContext';
@@ -41,6 +41,7 @@ export default function Menu() {
   const [orderSuccess, setOrderSuccess] = useState(() => {
     return localStorage.getItem('orderSuccess') === 'true';
   });
+  const [checkoutStep, setCheckoutStep] = useState<1 | 2 | 3>(1);
 
   // Coupons State
   const [couponCode, setCouponCode] = useState('');
@@ -68,6 +69,7 @@ export default function Menu() {
 
   // Feedback State
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [feedbackData, setFeedbackData] = useState({
     customerName: '',
     customerPhone: '',
@@ -674,8 +676,18 @@ export default function Menu() {
     }
   };
 
-  const popularProducts = products.filter(p => p.isPopular && p.isAvailable);
-  const dailyOffers = products.filter(p => p.isDailyOffer && p.isAvailable);
+  const filteredProducts = products.filter(p => {
+    const matchesCategory = activeCategory === 'todos' || 
+                           (activeCategory === 'offers' && p.isDailyOffer) ||
+                           (activeCategory === 'popular' && p.isPopular) ||
+                           p.categoryId === activeCategory;
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         p.description.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesSearch && p.isAvailable;
+  });
+
+  const popularProducts = filteredProducts.filter(p => p.isPopular);
+  const dailyOffers = filteredProducts.filter(p => p.isDailyOffer);
   const upsellProducts = products.filter(p => p.isUpsell && p.isAvailable);
 
   if (orderSuccess) {
@@ -834,7 +846,7 @@ export default function Menu() {
               onClick={() => setActiveCategory('offers')}
               className={cn(
                 "whitespace-nowrap px-5 py-2 rounded-full font-bold text-sm transition-all",
-                activeCategory === 'offers' ? "bg-[#E3242B] text-white shadow-md" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                activeCategory === 'offers' ? "bg-[#1A1A1A] text-[#FDE047] shadow-md" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
               )}
             >
               🏷️ Ofertas
@@ -845,7 +857,7 @@ export default function Menu() {
               onClick={() => setActiveCategory('popular')}
               className={cn(
                 "whitespace-nowrap px-5 py-2 rounded-full font-bold text-sm transition-all",
-                activeCategory === 'popular' ? "bg-[#E3242B] text-white shadow-md" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                activeCategory === 'popular' ? "bg-stone-900 text-[#FDE047] shadow-md" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
               )}
             >
               🔥 Más Vendidos
@@ -866,9 +878,23 @@ export default function Menu() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="bg-white px-4 py-3 border-b border-stone-100 sticky top-[125px] z-20">
+        <div className="max-w-4xl mx-auto relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
+          <input 
+            type="text"
+            placeholder="¿Qué se te antoja hoy? Buscar..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-[#1A1A1A] outline-none transition-all font-medium text-sm"
+          />
+        </div>
+      </div>
+
       {/* Store Closed Banner */}
       {!isStoreOpen && (
-        <div className="bg-stone-800 text-white text-center py-3 px-4 sticky top-[125px] z-20 text-sm font-medium flex items-center justify-center gap-2">
+        <div className="bg-stone-800 text-white text-center py-3 px-4 sticky top-[185px] z-20 text-sm font-medium flex items-center justify-center gap-2">
           <span>😴</span> En este momento estamos cerrados, pero échale un ojo a nuestro menú para ir antojándote.
         </div>
       )}
@@ -897,13 +923,19 @@ export default function Menu() {
           <div className="text-center py-20 text-stone-500">
             <p>Cargando el menú...</p>
           </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="text-center py-20 text-stone-500">
+            <Search size={48} className="mx-auto mb-4 opacity-20" />
+            <p className="font-medium">No encontramos lo que buscas.</p>
+            <button onClick={() => setSearchTerm('')} className="text-stone-900 font-bold mt-2 underline">Ver todo el menú</button>
+          </div>
         ) : (
-          <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Daily Offers Section */}
-            {(activeCategory === 'todos' || activeCategory === 'offers') && dailyOffers.length > 0 && (
-              <section id="category-offers" className="mb-10">
+            {dailyOffers.length > 0 && (
+              <section id="category-offers" className="col-span-full mb-4">
                 <h2 className="text-2xl font-display font-bold text-[#1A1A1A] mb-4 flex items-center gap-2">
-                  <span className="text-[#E3242B]">🏷️</span> Ofertas del Día
+                  <span className="text-stone-900">🏷️</span> Ofertas del Día
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {dailyOffers.map(product => (
@@ -914,10 +946,10 @@ export default function Menu() {
             )}
 
             {/* Popular Products Section */}
-            {(activeCategory === 'todos' || activeCategory === 'popular') && popularProducts.length > 0 && (
-              <section id="category-popular" className="mb-10">
+            {popularProducts.length > 0 && (
+              <section id="category-popular" className="col-span-full mb-4">
                 <h2 className="text-2xl font-display font-bold text-[#1A1A1A] mb-4 flex items-center gap-2">
-                  <span className="text-[#E3242B]">🔥</span> Los Más Vendidos
+                  <span className="text-stone-900">🔥</span> Los Más Vendidos
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {popularProducts.map(product => (
@@ -929,13 +961,11 @@ export default function Menu() {
 
             {/* Category Sections */}
             {categories.map(category => {
-              if (activeCategory !== 'todos' && activeCategory !== category.id) return null;
-              
-              const categoryProducts = products.filter(p => p.categoryId === category.id && p.isAvailable);
+              const categoryProducts = filteredProducts.filter(p => p.categoryId === category.id);
               if (categoryProducts.length === 0) return null;
 
               return (
-                <section key={category.id} id={`category-${category.id}`} className="mb-10">
+                <section key={category.id} id={`category-${category.id}`} className="col-span-full mb-4">
                   <h2 className="text-2xl font-display font-bold text-[#1A1A1A] mb-4">
                     {category.name}
                   </h2>
@@ -947,7 +977,7 @@ export default function Menu() {
                 </section>
               );
             })}
-          </>
+          </div>
         )}
       </main>
 
@@ -976,16 +1006,16 @@ export default function Menu() {
               };
 
               return (
-                <a 
+                <button 
                   key={link.id}
                   href={link.url} 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="bg-white/10 p-4 rounded-full hover:bg-[#E3242B] hover:text-white transition-colors text-[#FDE047]"
+                  className="bg-white/10 p-4 rounded-full hover:bg-stone-800 hover:text-white transition-colors text-[#FDE047]"
                   title={link.platform}
                 >
                   {getIcon(link.icon)}
-                </a>
+                </button>
               );
             })}
           </div>
@@ -1000,7 +1030,7 @@ export default function Menu() {
           <div className="max-w-md mx-auto flex gap-2">
             <button 
               onClick={() => setIsCartOpen(true)}
-              className="flex-1 bg-[#E3242B] text-white p-4 rounded-2xl shadow-[0_8px_30px_rgba(227,36,43,0.4)] flex justify-between items-center font-bold text-lg active:scale-95 transition-transform"
+              className="flex-1 bg-stone-900 text-white p-4 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.2)] flex justify-between items-center font-bold text-lg active:scale-95 transition-transform"
             >
               <div className="flex items-center gap-3">
                 <div className="bg-white/20 w-8 h-8 rounded-full flex items-center justify-center text-sm">
@@ -1032,18 +1062,35 @@ export default function Menu() {
         <div className="fixed inset-0 z-50 flex justify-center sm:justify-end bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-md bg-[#F8F9FA] h-full sm:h-auto sm:min-h-screen shadow-2xl flex flex-col animate-in slide-in-from-bottom sm:slide-in-from-right">
             <div className="p-4 bg-white border-b border-stone-200 flex justify-between items-center sticky top-0 z-10">
-              <h2 className="text-xl font-bold flex items-center gap-2 text-[#1A1A1A]">
-                <ShoppingCart size={24} className="text-[#E3242B]" />
-                Tu Pedido
-              </h2>
+              <div className="flex flex-col">
+                <h2 className="text-xl font-bold flex items-center gap-2 text-[#1A1A1A]">
+                  <ShoppingCart size={24} className="text-stone-900" />
+                  Tu Pedido
+                </h2>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <div className={cn("h-1 flex-1 rounded-full transition-all", checkoutStep >= 1 ? "bg-stone-900" : "bg-stone-100")} />
+                  <div className={cn("h-1 flex-1 rounded-full transition-all", checkoutStep >= 2 ? "bg-stone-900" : "bg-stone-100")} />
+                  <div className={cn("h-1 flex-1 rounded-full transition-all", checkoutStep >= 3 ? "bg-stone-900" : "bg-stone-100")} />
+                </div>
+              </div>
               <button onClick={() => setIsCartOpen(false)} className="bg-stone-100 text-stone-500 hover:bg-stone-200 p-2 rounded-full transition-colors">
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={submitOrder} className="flex-1 flex flex-col overflow-hidden">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (checkoutStep < 3) {
+                setCheckoutStep((checkoutStep + 1) as any);
+              } else {
+                submitOrder(e);
+              }
+            }} className="flex-1 flex flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-100">
+                {checkoutStep === 1 && (
+                  <div className="animate-in slide-in-from-right duration-300">
+                    <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-100 mb-4">
+                      <h3 className="text-xs font-black text-stone-400 uppercase tracking-widest mb-4">Paso 1: Resumen de Productos</h3>
                   {cart.map(item => {
                     const isCombo = categories.find(c => c.id === item.categoryId)?.name.toLowerCase().includes('combo');
                     const maxSelections = isCombo ? getComboMaxSelections(item.description) : 0;
@@ -1066,10 +1113,10 @@ export default function Menu() {
                         <div className="flex gap-3 items-center">
                           <div className="flex-1">
                             <h4 className="font-bold text-sm text-[#1A1A1A]">{item.name}</h4>
-                            <span className="text-[#E3242B] font-bold text-sm">{formatPrice(itemTotal)}</span>
+                            <span className="text-stone-900 font-bold text-sm">{formatPrice(itemTotal)}</span>
                           </div>
                           <div className="flex items-center gap-3 bg-stone-100 rounded-full px-2 py-1">
-                            <button type="button" onClick={() => updateQuantity(item.id, -1)} className="text-stone-500 hover:text-[#E3242B] p-1">
+                            <button type="button" onClick={() => updateQuantity(item.id, -1)} className="text-stone-500 hover:text-stone-900 p-1">
                               {item.quantity === 1 ? <Trash2 size={14} /> : <Minus size={14} strokeWidth={3} />}
                             </button>
                             <span className="font-bold w-4 text-center text-sm">{item.quantity}</span>
@@ -1165,12 +1212,12 @@ export default function Menu() {
                 {/* Order Notes & Cross-selling */}
                 <div className="space-y-3">
                   <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
-                    <label className="block text-sm font-bold text-[#1A1A1A] mb-2">¿Falta algo o tienes alguna nota?</label>
+                    <label className="block text-sm font-bold text-[#1A1A1A] mb-2">¿Alguna nota especial?</label>
                     <textarea 
                       placeholder="Ej: Sin cebolla, salsas aparte..." 
                       value={orderNotes}
                       onChange={e => setOrderNotes(e.target.value)}
-                      className="w-full p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-[#E3242B] bg-stone-50 min-h-[60px] text-sm mb-3"
+                      className="w-full p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-stone-900 bg-stone-50 min-h-[60px] text-sm mb-3"
                     />
                     
                     {upsellProducts.length > 0 && (
@@ -1190,7 +1237,7 @@ export default function Menu() {
                               <div key={product.id} className="bg-white rounded-xl p-2 shadow-sm border border-blue-100 min-w-[140px] shrink-0 flex flex-col justify-between">
                                 <div>
                                   <h5 className="font-bold text-xs text-[#1A1A1A] line-clamp-1">{product.name}</h5>
-                                  <span className="text-[#E3242B] font-bold text-xs">{formatPrice(product.price)}</span>
+                                  <span className="text-stone-900 font-bold text-xs">{formatPrice(product.price)}</span>
                                 </div>
                                 <button 
                                   type="button"
@@ -1207,241 +1254,242 @@ export default function Menu() {
                     )}
                   </div>
                 </div>
+              </div>
+            )}
 
-                {/* Delivery Type */}
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
-                  <h3 className="font-bold text-[#1A1A1A] mb-3 text-lg">¿Cómo quieres tu pedido?</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button type="button" onClick={() => setDeliveryType('domicilio')} className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all", deliveryType === 'domicilio' ? "border-[#E3242B] bg-red-50 text-[#E3242B]" : "border-stone-200 text-stone-500")}>
-                      <Bike size={24} />
-                      <span className="text-xs font-bold">Domicilio</span>
-                    </button>
-                    <button type="button" onClick={() => setDeliveryType('recoger')} className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all", deliveryType === 'recoger' ? "border-[#E3242B] bg-red-50 text-[#E3242B]" : "border-stone-200 text-stone-500")}>
-                      <Store size={24} />
-                      <span className="text-xs font-bold">Recoger</span>
-                    </button>
-                    <button type="button" onClick={() => setDeliveryType('local')} className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all", deliveryType === 'local' ? "border-[#E3242B] bg-red-50 text-[#E3242B]" : "border-stone-200 text-stone-500")}>
-                      <UtensilsCrossed size={24} />
-                      <span className="text-xs font-bold">En Local</span>
-                    </button>
-                  </div>
-                </div>
+                {checkoutStep === 2 && (
+                  <div className="animate-in slide-in-from-right duration-300 space-y-4">
+                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
+                      <h3 className="text-xs font-black text-stone-400 uppercase tracking-widest mb-4">Paso 2: Información de Envío</h3>
+                      <div className="grid grid-cols-3 gap-2 mb-6">
+                        <button type="button" onClick={() => setDeliveryType('domicilio')} className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all", deliveryType === 'domicilio' ? "border-stone-900 bg-stone-50 text-stone-900" : "border-stone-200 text-stone-500")}>
+                          <Bike size={24} />
+                          <span className="text-xs font-bold">Domicilio</span>
+                        </button>
+                        <button type="button" onClick={() => setDeliveryType('recoger')} className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all", deliveryType === 'recoger' ? "border-stone-900 bg-stone-50 text-stone-900" : "border-stone-200 text-stone-500")}>
+                          <Store size={24} />
+                          <span className="text-xs font-bold">Recoger</span>
+                        </button>
+                        <button type="button" onClick={() => setDeliveryType('local')} className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all", deliveryType === 'local' ? "border-stone-900 bg-stone-50 text-stone-900" : "border-stone-200 text-stone-500")}>
+                          <UtensilsCrossed size={24} />
+                          <span className="text-xs font-bold">En Local</span>
+                        </button>
+                      </div>
 
-                {/* Customer Details */}
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 space-y-3">
-                  <input 
-                    type="text" 
-                    placeholder="Tu Nombre" 
-                    required
-                    value={customerName}
-                    onChange={e => setCustomerName(e.target.value)}
-                    className="w-full p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-[#E3242B] bg-stone-50"
-                  />
-                  <input 
-                    type="tel" 
-                    placeholder="Tu Teléfono (WhatsApp)" 
-                    required
-                    value={customerPhone}
-                    onChange={e => setCustomerPhone(e.target.value)}
-                    className="w-full p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-[#E3242B] bg-stone-50"
-                  />
-                  
-                  {deliveryType === 'domicilio' && (
-                    <>
-                      <textarea 
-                        placeholder="Dirección y referencias (Ej: Casa roja, rejas negras)" 
-                        required
-                        value={customerAddress}
-                        onChange={e => setCustomerAddress(e.target.value)}
-                        className="w-full p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-[#E3242B] bg-stone-50 min-h-[80px]"
-                      />
-                      <button 
-                        type="button"
-                        onClick={getLocation}
-                        className={cn(
-                          "w-full flex items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all text-sm font-bold shadow-sm relative overflow-hidden group",
-                          location 
-                            ? "bg-emerald-50 border-emerald-500 text-emerald-700" 
-                            : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:border-amber-400 active:scale-[0.98] ring-2 ring-amber-100 ring-offset-2 animate-pulse"
+                      <div className="space-y-3">
+                        <input 
+                          type="text" 
+                          placeholder="Tu Nombre" 
+                          required
+                          value={customerName}
+                          onChange={e => setCustomerName(e.target.value)}
+                          className="w-full p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-stone-900 bg-stone-50"
+                        />
+                        <input 
+                          type="tel" 
+                          placeholder="Tu Teléfono (WhatsApp)" 
+                          required
+                          value={customerPhone}
+                          onChange={e => setCustomerPhone(e.target.value)}
+                          className="w-full p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-stone-900 bg-stone-50"
+                        />
+                        
+                        {deliveryType === 'domicilio' && (
+                          <>
+                            <textarea 
+                              placeholder="Dirección y referencias (Ej: Casa roja, rejas negras)" 
+                              required
+                              value={customerAddress}
+                              onChange={e => setCustomerAddress(e.target.value)}
+                              className="w-full p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-stone-900 bg-stone-50 min-h-[80px]"
+                            />
+                            <button 
+                              type="button"
+                              onClick={getLocation}
+                              className={cn(
+                                "w-full flex items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all text-sm font-bold shadow-sm relative overflow-hidden group",
+                                location 
+                                  ? "bg-emerald-50 border-emerald-500 text-emerald-700" 
+                                  : "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:border-amber-400 active:scale-[0.98] ring-2 ring-amber-100 ring-offset-2 animate-pulse"
+                              )}
+                            >
+                              <div className={cn(
+                                "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300",
+                                location ? "bg-emerald-100" : "bg-amber-100 group-hover:scale-110"
+                              )}>
+                                <MapPin size={20} className={location ? "text-emerald-600" : "text-amber-600"} />
+                              </div>
+                              <div className="flex flex-col items-start">
+                                <span className="uppercase tracking-tight">{isLocating ? "Obteniendo..." : location ? "Ubicación guardada ✓" : "Compartir ubicación GPS"}</span>
+                                {!location && !isLocating && <span className="text-[10px] font-black uppercase opacity-70 tracking-widest">Toca aquí para habilitar</span>}
+                              </div>
+                            </button>
+                          </>
                         )}
-                      >
-                        <div className={cn(
-                          "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300",
-                          location ? "bg-emerald-100" : "bg-amber-100 group-hover:scale-110"
-                        )}>
-                          <MapPin size={20} className={location ? "text-emerald-600" : "text-amber-600"} />
-                        </div>
-                        <div className="flex flex-col items-start">
-                          <span className="uppercase tracking-tight">{isLocating ? "Obteniendo..." : location ? "Ubicación guardada ✓" : "Compartir ubicación GPS"}</span>
-                          {!location && !isLocating && <span className="text-[10px] font-black uppercase opacity-70 tracking-widest">Toca aquí para habilitar</span>}
-                        </div>
-                      </button>
-                      <p className="text-[10px] text-stone-400 text-center px-4">
-                        * El GPS es opcional pero ayuda al repartidor. Funciona en cualquier celular (iPhone/Android) sin necesidad de apps instaladas.
-                      </p>
-                      <p className="text-xs text-stone-500 text-center italic">* El costo del domicilio se confirmará por WhatsApp</p>
-                    </>
-                  )}
-                </div>
-
-                {/* Payment Method */}
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
-                  <h3 className="font-bold text-[#1A1A1A] mb-3 text-lg">¿Cómo vas a pagar?</h3>
-                  <div className="grid grid-cols-2 gap-2 mb-4">
-                    <button type="button" onClick={() => setPaymentMethod('nequi')} className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all", paymentMethod === 'nequi' ? "border-[#1A1A1A] bg-stone-100 text-[#1A1A1A]" : "border-stone-200 text-stone-500")}>
-                      <Wallet size={24} />
-                      <span className="text-xs font-bold">Nequi / Transf.</span>
-                    </button>
-                    <button type="button" onClick={() => setPaymentMethod('efectivo')} className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all", paymentMethod === 'efectivo' ? "border-[#1A1A1A] bg-stone-100 text-[#1A1A1A]" : "border-stone-200 text-stone-500")}>
-                      <Banknote size={24} />
-                      <span className="text-xs font-bold">Efectivo</span>
-                    </button>
-                  </div>
-
-                  {paymentMethod === 'nequi' && (
-                    <div className="bg-[#FDE047]/20 p-3 rounded-xl text-center border border-[#FDE047]">
-                      <p className="text-xs text-stone-600 mb-1">Transfiere a este número:</p>
-                      <p className="font-bold text-lg tracking-widest text-[#1A1A1A]">{settings.nequiNumber || '3124726152'}</p>
+                      </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {paymentMethod === 'efectivo' && (
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-stone-600">¿Con cuánto vas a pagar?</label>
-                      <input 
-                        type="number" 
-                        placeholder="Ej: 50000" 
-                        required
-                        value={cashAmount}
-                        onChange={e => setCashAmount(e.target.value)}
-                        className="w-full p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-[#1A1A1A] bg-stone-50"
-                      />
-                      {cashAmount && parseFloat(cashAmount) >= cartTotal && (
-                        <p className="text-sm text-green-600 font-medium">
-                          Tu cambio será: {formatPrice(parseFloat(cashAmount) - cartTotal)}
-                        </p>
+                {checkoutStep === 3 && (
+                  <div className="animate-in slide-in-from-right duration-300 space-y-4">
+                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
+                      <h3 className="text-xs font-black text-stone-400 uppercase tracking-widest mb-4">Paso 3: Método de Pago</h3>
+                      <div className="grid grid-cols-2 gap-2 mb-4">
+                        <button type="button" onClick={() => setPaymentMethod('nequi')} className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all", paymentMethod === 'nequi' ? "border-[#1A1A1A] bg-stone-100 text-[#1A1A1A]" : "border-stone-200 text-stone-500")}>
+                          <Wallet size={24} />
+                          <span className="text-xs font-bold">Nequi / Transf.</span>
+                        </button>
+                        <button type="button" onClick={() => setPaymentMethod('efectivo')} className={cn("flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all", paymentMethod === 'efectivo' ? "border-[#1A1A1A] bg-stone-100 text-[#1A1A1A]" : "border-stone-200 text-stone-500")}>
+                          <Banknote size={24} />
+                          <span className="text-xs font-bold">Efectivo</span>
+                        </button>
+                      </div>
+
+                      {paymentMethod === 'nequi' && (
+                        <div className="bg-[#FDE047]/20 p-3 rounded-xl text-center border border-[#FDE047]">
+                          <p className="text-xs text-stone-600 mb-1">Transfiere a este número:</p>
+                          <p className="font-bold text-lg tracking-widest text-[#1A1A1A]">{settings.nequiNumber || '3124726152'}</p>
+                        </div>
+                      )}
+
+                      {paymentMethod === 'efectivo' && (
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-stone-600">¿Con cuánto vas a pagar?</label>
+                          <input 
+                            type="number" 
+                            placeholder="Ej: 50000" 
+                            required
+                            value={cashAmount}
+                            onChange={e => setCashAmount(e.target.value)}
+                            className="w-full p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-[#1A1A1A] bg-stone-50"
+                          />
+                          {cashAmount && parseFloat(cashAmount) >= cartTotal && (
+                            <p className="text-sm text-green-600 font-medium">
+                              Tu cambio será: {formatPrice(parseFloat(cashAmount) - cartTotal)}
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
 
-                {/* Coupon Section */}
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
-                  <h3 className="font-bold text-[#1A1A1A] mb-3 text-sm flex items-center gap-2">
-                    <Gift size={16} className="text-[#E3242B]" /> ¿Tienes un cupón de descuento?
-                  </h3>
-                  
-                  {!hasActiveCoupons && !appliedCoupon ? (
-                    <div className="bg-stone-50 border border-stone-200 rounded-xl p-3">
-                      <p className="text-xs text-stone-500 font-medium">No hay cupones activos en este momento.</p>
-                    </div>
-                  ) : appliedCoupon ? (
-                    <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-bold text-green-700 flex items-center gap-1">
-                          <CheckCircle2 size={14} /> Cupón Aplicado
-                        </p>
-                        <p className="text-xs text-green-600 font-medium">
-                          {appliedCoupon.code} (-{appliedCoupon.discountType === 'percentage' ? `${appliedCoupon.discountValue}%` : formatPrice(appliedCoupon.discountValue)})
-                        </p>
-                      </div>
-                      <button 
-                        type="button" 
-                        onClick={removeCoupon}
-                        className="text-stone-400 hover:text-red-500 transition-colors p-1"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        placeholder="Ingresa tu código" 
-                        value={couponCode}
-                        onChange={e => setCouponCode(e.target.value.toUpperCase())}
-                        onKeyDown={e => e.key === 'Enter' && applyCoupon()}
-                        className="flex-1 p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-[#E3242B] bg-stone-50 uppercase text-sm font-bold"
-                      />
-                      <button 
-                        type="button"
-                        onClick={() => applyCoupon()}
-                        disabled={!couponCode.trim()}
-                        className="bg-stone-900 text-white px-4 rounded-xl font-bold text-sm disabled:opacity-50 transition-opacity"
-                      >
-                        Aplicar
-                      </button>
-                    </div>
-                  )}
-                  {couponError && (
-                    <p className="text-xs text-red-500 mt-2 font-medium">{couponError}</p>
-                  )}
-                </div>
-
-                {/* Loyalty Opt-In */}
-                {settings.loyaltyEnabled && (
-                  <div className="bg-stone-900 p-5 rounded-2xl text-white shadow-xl relative overflow-hidden border border-stone-800">
-                    <div className="absolute -top-4 -right-4 p-4 opacity-10 rotate-12"><Gift size={80} /></div>
-                    <h3 className="font-black text-[#FDE047] mb-1 flex items-center gap-2 uppercase tracking-tight">
-                      <Gift size={18} /> Club Bocado Express
-                    </h3>
-                    <p className="text-xs text-stone-400 mb-3 font-medium">Acumula pedidos y gana comida gratis.</p>
-                    
-                    {settings.loyaltyMinOrder > 0 && (
-                      <div className="bg-white/5 border border-white/10 rounded-xl p-3 mb-4">
-                        <p className="text-[10px] text-stone-300 font-bold uppercase tracking-widest leading-relaxed">
-                          ⚠️ Nota: Para recibir un sello, el pedido debe ser mayor a <span className="text-[#FDE047]">{formatPrice(settings.loyaltyMinOrder)}</span>
-                        </p>
+                    {hasActiveCoupons && (
+                      <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
+                        <h3 className="font-bold text-[#1A1A1A] mb-3 text-sm flex items-center gap-2">
+                          <Gift size={16} className="text-stone-900" /> ¿Tienes un cupón?
+                        </h3>
+                        
+                        {appliedCoupon ? (
+                          <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-bold text-green-700 flex items-center gap-1">
+                                <CheckCircle2 size={14} /> Cupón Aplicado
+                              </p>
+                              <p className="text-xs text-green-600 font-medium">
+                                {appliedCoupon.code} (-{appliedCoupon.discountType === 'percentage' ? `${appliedCoupon.discountValue}%` : formatPrice(appliedCoupon.discountValue)})
+                              </p>
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={removeCoupon}
+                              className="text-stone-400 hover:text-red-500 transition-colors p-1"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <input 
+                              type="text" 
+                              placeholder="Ingresa tu código" 
+                              value={couponCode}
+                              onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                              className="flex-1 p-3 rounded-xl border border-stone-200 focus:outline-none focus:border-stone-900 bg-stone-50 uppercase text-sm font-bold"
+                            />
+                            <button 
+                              type="button"
+                              onClick={() => applyCoupon()}
+                              disabled={!couponCode.trim()}
+                              className="bg-stone-900 text-white px-4 rounded-xl font-bold text-sm disabled:opacity-50 transition-opacity"
+                            >
+                              Aplicar
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
-                    
-                    <label className="flex items-start gap-3 cursor-pointer group">
-                      <div className={cn(
-                        "mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
-                        loyaltyOptIn ? "bg-[#E3242B] border-[#E3242B]" : "border-stone-700 group-hover:border-stone-500"
-                      )}>
-                        {loyaltyOptIn && <CheckCircle2 size={16} className="text-white" />}
+
+                    {settings.loyaltyEnabled && (
+                      <div className="bg-stone-900 p-5 rounded-2xl text-white shadow-xl relative overflow-hidden border border-stone-800">
+                        <div className="absolute -top-4 -right-4 p-4 opacity-10 rotate-12"><Gift size={80} /></div>
+                        <h3 className="font-black text-[#FDE047] mb-1 flex items-center gap-2 uppercase tracking-tight">
+                          <Gift size={18} /> Club Bocado Express
+                        </h3>
+                        <p className="text-xs text-stone-400 mb-3 font-medium">Acumula pedidos y gana comida gratis.</p>
+                        <label className="flex items-start gap-3 cursor-pointer group">
+                          <div className={cn(
+                            "mt-0.5 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
+                            loyaltyOptIn ? "bg-stone-100 border-stone-100" : "border-stone-700 group-hover:border-stone-500"
+                          )}>
+                            {loyaltyOptIn && <CheckCircle2 size={16} className="text-stone-900" />}
+                          </div>
+                          <input 
+                            type="checkbox" 
+                            checked={loyaltyOptIn}
+                            onChange={(e) => setLoyaltyOptIn(e.target.checked)}
+                            className="hidden"
+                          />
+                          <span className="text-sm font-bold text-stone-200 leading-tight">Sí, quiero unirme gratis y recibir mi sello.</span>
+                        </label>
                       </div>
-                      <input 
-                        type="checkbox" 
-                        checked={loyaltyOptIn}
-                        onChange={(e) => setLoyaltyOptIn(e.target.checked)}
-                        className="hidden"
-                      />
-                      <span className="text-sm font-bold text-stone-200 leading-tight">Sí, quiero unirme gratis y recibir mi sello.</span>
-                    </label>
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* Total & Submit Footer (Fixed at bottom of form) */}
-              <div className="p-4 bg-white border-t border-stone-200 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] shrink-0">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-stone-500 text-sm font-medium">Subtotal</span>
-                  <span className="text-stone-700 font-bold">{formatPrice(cartSubtotal)}</span>
-                </div>
-                {appliedCoupon && (
-                  <div className="flex justify-between items-center mb-2 text-green-600">
-                    <span className="text-sm font-medium">Descuento ({appliedCoupon.code})</span>
-                    <span className="font-bold">-{formatPrice(discountAmount)}</span>
+              <div className="p-4 bg-white border-t border-stone-200 space-y-3">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-stone-500 text-sm">
+                    <span>Subtotal</span>
+                    <span>{formatPrice(cartTotal + (appliedCoupon ? (appliedCoupon.discountType === 'percentage' ? (cartTotal / (1 - appliedCoupon.discountValue / 100)) * (appliedCoupon.discountValue / 100) : appliedCoupon.discountValue) : 0))}</span>
                   </div>
-                )}
-                <div className="flex justify-between items-center mb-4 pt-2 border-t border-stone-100">
-                  <span className="text-stone-800 font-bold">Total a pagar</span>
-                  <span className="text-2xl font-black text-[#E3242B]">{formatPrice(cartTotal)}</span>
-                </div>
-                <button 
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-[#E3242B] text-white font-bold text-lg p-4 rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-95 disabled:opacity-70"
-                >
-                  {isSubmitting ? "Procesando..." : (
-                    <>
-                      <Send size={20} />
-                      Enviar Pedido por WhatsApp
-                    </>
+                  {appliedCoupon && (
+                    <div className="flex justify-between text-green-600 text-sm font-bold">
+                      <span>Descuento ({appliedCoupon.code})</span>
+                      <span>-{formatPrice(appliedCoupon.discountType === 'percentage' ? (cartTotal / (1 - appliedCoupon.discountValue / 100)) * (appliedCoupon.discountValue / 100) : appliedCoupon.discountValue)}</span>
+                    </div>
                   )}
-                </button>
+                  <div className="flex justify-between text-stone-900 text-xl font-black pt-1">
+                    <span>Total</span>
+                    <span>{formatPrice(cartTotal)}</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  {checkoutStep > 1 && (
+                    <button 
+                      type="button"
+                      onClick={() => setCheckoutStep((checkoutStep - 1) as any)}
+                      className="flex-1 bg-stone-100 text-stone-600 font-bold py-4 rounded-2xl active:scale-95 transition-all"
+                    >
+                      Atrás
+                    </button>
+                  )}
+                  <button 
+                    type="submit"
+                    disabled={isSubmitting || (checkoutStep === 2 && (!customerName || !customerPhone || (deliveryType === 'domicilio' && !customerAddress)))}
+                    className="flex-[2] bg-stone-900 text-white font-black uppercase tracking-widest py-4 rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        {checkoutStep === 3 ? <Send size={20} /> : <Plus size={20} />}
+                        {checkoutStep === 1 ? "Siguiente: Envío" : checkoutStep === 2 ? "Siguiente: Pago" : "Enviar Pedido"}
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -1494,7 +1542,7 @@ export default function Menu() {
                       <button 
                         type="submit"
                         disabled={isCheckingLoyalty}
-                        className="w-full bg-[#E3242B] text-white font-bold p-4 rounded-xl transition-transform active:scale-95 shadow-lg shadow-red-200"
+                        className="w-full bg-stone-900 text-white font-bold p-4 rounded-xl transition-transform active:scale-95 shadow-lg shadow-stone-200"
                       >
                         {isCheckingLoyalty ? "Registrando..." : "Unirme al Club"}
                       </button>
@@ -1547,7 +1595,7 @@ export default function Menu() {
                       <div key={i} className={cn(
                         "w-12 h-12 rounded-full flex items-center justify-center border-2 text-xl",
                         i < loyaltyCustomer.stamps 
-                          ? "bg-[#E3242B] border-[#E3242B] text-white shadow-inner" 
+                          ? "bg-stone-900 border-stone-900 text-white shadow-inner" 
                           : "bg-stone-100 border-stone-200 text-stone-300"
                       )}>
                         {i < loyaltyCustomer.stamps ? "🍔" : i + 1}
@@ -1563,7 +1611,7 @@ export default function Menu() {
                   ) : (
                     <p className="text-sm text-stone-600">
                       Te faltan {settings.loyaltyGoal - loyaltyCustomer.stamps} pedidos para ganar: <br/>
-                      <strong className="text-[#E3242B]">{settings.loyaltyPrize}</strong>
+                      <strong className="text-stone-900">{settings.loyaltyPrize}</strong>
                     </p>
                   )}
 
@@ -1741,7 +1789,8 @@ export default function Menu() {
 function ProductCard({ product, addToCart, isStoreOpen }: { product: Product, addToCart: (p: Product) => void, isStoreOpen: boolean, key?: string | number }) {
   const [added, setAdded] = useState(false);
 
-  const handleAdd = () => {
+  const handleAdd = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (!isStoreOpen) return;
     addToCart(product);
     setAdded(true);
@@ -1749,10 +1798,19 @@ function ProductCard({ product, addToCart, isStoreOpen }: { product: Product, ad
   };
 
   return (
-    <div className="bg-white rounded-3xl p-4 shadow-sm border border-stone-100 flex gap-4 transition-all hover:shadow-md relative overflow-hidden">
+    <div 
+      onClick={handleAdd}
+      className={cn(
+        "bg-white rounded-3xl p-4 shadow-sm border border-stone-100 flex gap-4 transition-all hover:shadow-md relative overflow-hidden cursor-pointer active:scale-[0.98]",
+        added && "ring-2 ring-emerald-500 ring-inset"
+      )}
+    >
+      {added && (
+        <div className="absolute inset-0 bg-emerald-500/10 animate-in fade-in duration-300 pointer-events-none" />
+      )}
       <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
         {product.isDailyOffer && (
-          <span className="bg-[#E3242B] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
+          <span className="bg-stone-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
             <Tag size={10} /> Oferta
           </span>
         )}
@@ -1784,17 +1842,6 @@ function ProductCard({ product, addToCart, isStoreOpen }: { product: Product, ad
           <span className="font-bold text-[#1A1A1A]">
             {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(product.price)}
           </span>
-          <button 
-            onClick={handleAdd}
-            disabled={!isStoreOpen}
-            className={cn(
-              "w-8 h-8 rounded-full flex items-center justify-center transition-all",
-              !isStoreOpen ? "bg-stone-100 text-stone-400" :
-              added ? "bg-green-500 text-white" : "bg-[#1A1A1A] text-white hover:bg-[#E3242B]"
-            )}
-          >
-            {added ? <CheckCircle2 size={16} /> : <Plus size={16} strokeWidth={3} />}
-          </button>
         </div>
       </div>
     </div>

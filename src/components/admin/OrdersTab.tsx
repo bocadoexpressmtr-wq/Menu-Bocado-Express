@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { MapPin, CheckCircle, Trash2, Clock, ShoppingBag, Trophy, MessageSquare, Bike, Store, Wallet, Archive, CheckSquare, Square } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { MapPin, CheckCircle, Trash2, Clock, ShoppingBag, Trophy, MessageSquare, Bike, Store, Wallet, Archive, CheckSquare, Square, Filter } from 'lucide-react';
 import { updateDoc, doc, getDoc, deleteDoc, collection, query, where, getDocs, addDoc, increment, writeBatch, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Order, StoreSettings } from '../../types';
@@ -11,10 +11,22 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+  const [filterPayment, setFilterPayment] = useState<string>('all');
+  const [filterDelivery, setFilterDelivery] = useState<string>('all');
+  const previousOrderCount = useRef(0);
 
   useEffect(() => {
     const unsub = onSnapshot(query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(500)), (snapshot) => {
-      setOrders(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)));
+      const newOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+      
+      const pendingCount = newOrders.filter(o => o.status === 'pending').length;
+      if (pendingCount > previousOrderCount.current && previousOrderCount.current !== 0) {
+        const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+        audio.play().catch(e => console.log("Audio play failed", e));
+      }
+      previousOrderCount.current = pendingCount;
+      
+      setOrders(newOrders);
       setLoading(false);
     }, (err) => console.error(err));
     return () => unsub();
@@ -163,7 +175,12 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
     }).format(price);
   };
 
-  const visibleOrders = orders.filter(o => showArchived ? o.status === 'archived' : o.status !== 'archived');
+  const visibleOrders = orders.filter(o => {
+    if (showArchived ? o.status !== 'archived' : o.status === 'archived') return false;
+    if (filterPayment !== 'all' && o.paymentMethod !== filterPayment) return false;
+    if (filterDelivery !== 'all' && o.deliveryType !== filterDelivery) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -208,6 +225,31 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
             <span className="text-xs font-bold text-stone-600 uppercase tracking-wider">En Vivo</span>
           </div>
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-3 bg-white p-4 rounded-2xl border border-stone-100 shadow-sm">
+        <div className="flex items-center gap-2 text-stone-500 text-sm font-bold">
+          <Filter size={16} /> Filtros:
+        </div>
+        <select 
+          value={filterPayment} 
+          onChange={(e) => setFilterPayment(e.target.value)}
+          className="bg-stone-50 border border-stone-200 text-stone-700 text-xs font-bold rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-stone-900"
+        >
+          <option value="all">Todos los Pagos</option>
+          <option value="nequi">Nequi / Transf.</option>
+          <option value="efectivo">Efectivo</option>
+        </select>
+        <select 
+          value={filterDelivery} 
+          onChange={(e) => setFilterDelivery(e.target.value)}
+          className="bg-stone-50 border border-stone-200 text-stone-700 text-xs font-bold rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-stone-900"
+        >
+          <option value="all">Todas las Entregas</option>
+          <option value="domicilio">Domicilio</option>
+          <option value="recoger">Recoger</option>
+          <option value="local">En Local</option>
+        </select>
       </div>
 
       {visibleOrders.length > 0 && (
