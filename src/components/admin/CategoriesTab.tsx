@@ -109,7 +109,7 @@ export default function CategoriesTab() {
               <div className="flex justify-end pt-6 border-t border-stone-50 gap-3">
                 <button type="button" onClick={closeForm} className="px-6 py-3 rounded-2xl text-stone-400 font-black uppercase tracking-wider text-xs hover:text-stone-600 transition-colors">Cancelar</button>
                 <button type="submit" className="bg-stone-900 text-white px-8 py-3 rounded-2xl flex items-center gap-2 hover:bg-stone-800 font-black uppercase tracking-wider text-xs shadow-lg shadow-stone-200 transition-all active:scale-95">
-                  <Save size={18} /> Guardar Categoría
+                  <Save size={18} /> Guardar Cambios
                 </button>
               </div>
             </form>
@@ -122,25 +122,25 @@ export default function CategoriesTab() {
         <table className="w-full text-left text-sm">
           <thead className="bg-stone-50 text-stone-500 border-b border-stone-200">
             <tr>
-              <th className="px-6 py-4 font-medium">Orden</th>
-              <th className="px-6 py-4 font-medium">Nombre</th>
-              <th className="px-6 py-4 font-medium text-right">Acciones</th>
+              <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider">Orden</th>
+              <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider">Nombre</th>
+              <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
             {categories.map(category => (
-              <tr key={category.id} className="hover:bg-stone-50">
-                <td className="px-6 py-4 text-stone-500">{category.order}</td>
-                <td className="px-6 py-4 font-medium text-stone-900">{category.name}</td>
-                <td className="px-6 py-4 text-right">
-                  <button onClick={() => { setIsAdding(false); setEditingCategory(category); }} className="text-stone-400 hover:text-stone-900 p-2 transition-colors"><Edit2 size={18} /></button>
-                  <button onClick={() => handleDelete(category.id)} className="text-stone-400 hover:text-red-600 p-2 ml-2 transition-colors"><Trash2 size={18} /></button>
+              <tr key={category.id} className="hover:bg-stone-50 transition-colors">
+                <td className="px-4 py-3 text-stone-500 font-medium">{category.order}</td>
+                <td className="px-4 py-3 font-bold text-stone-900">{category.name}</td>
+                <td className="px-4 py-3 text-right">
+                  <button onClick={() => { setIsAdding(false); setEditingCategory(category); }} className="text-stone-400 hover:text-stone-900 p-1.5 transition-colors"><Edit2 size={16} /></button>
+                  <button onClick={() => handleDelete(category.id)} className="text-stone-400 hover:text-red-600 p-1.5 ml-1 transition-colors"><Trash2 size={16} /></button>
                 </td>
               </tr>
             ))}
             {categories.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-6 py-8 text-center text-stone-500">No hay categorías. Agrega una nueva.</td>
+                <td colSpan={3} className="px-4 py-8 text-center text-stone-500 text-sm">No hay categorías. Agrega una nueva.</td>
               </tr>
             )}
           </tbody>
@@ -148,27 +148,27 @@ export default function CategoriesTab() {
       </div>
 
       {/* Mobile List */}
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden space-y-2">
         {categories.map(category => (
-          <div key={category.id} className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm flex items-center justify-between">
+          <div key={category.id} className="bg-white p-3 rounded-xl border border-stone-200 shadow-sm flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="w-8 h-8 bg-stone-100 rounded-lg flex items-center justify-center text-stone-500 text-xs font-bold">
+              <span className="w-6 h-6 bg-stone-100 rounded-md flex items-center justify-center text-stone-500 text-[10px] font-bold">
                 {category.order}
               </span>
-              <span className="font-medium text-stone-900">{category.name}</span>
+              <span className="font-bold text-stone-900 text-sm">{category.name}</span>
             </div>
             <div className="flex items-center gap-1">
-              <button onClick={() => { setIsAdding(false); setEditingCategory(category); }} className="p-3 text-stone-400 hover:text-stone-900 transition-all active:scale-90">
-                <Edit2 size={20} />
+              <button onClick={() => { setIsAdding(false); setEditingCategory(category); }} className="p-2 text-stone-400 hover:text-stone-900 transition-all active:scale-90">
+                <Edit2 size={16} />
               </button>
-              <button onClick={() => handleDelete(category.id)} className="p-3 text-stone-400 hover:text-red-600 transition-all active:scale-90">
-                <Trash2 size={20} />
+              <button onClick={() => handleDelete(category.id)} className="p-2 text-stone-400 hover:text-red-600 transition-all active:scale-90">
+                <Trash2 size={16} />
               </button>
             </div>
           </div>
         ))}
         {categories.length === 0 && (
-          <div className="p-8 text-center text-stone-500 bg-white rounded-xl border border-stone-200">
+          <div className="p-6 text-center text-stone-500 text-sm bg-white rounded-xl border border-stone-200">
             No hay categorías. Agrega una nueva.
           </div>
         )}

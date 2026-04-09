@@ -124,7 +124,7 @@ export default function ReviewsTab() {
             </div>
             <div className="flex justify-end pt-4 border-t border-stone-100">
               <button type="submit" className="bg-stone-900 text-white px-6 py-2 rounded-xl flex items-center gap-2 hover:bg-stone-800 font-medium">
-                <Save size={16} /> Guardar
+                <Save size={16} /> Guardar Cambios
               </button>
             </div>
           </form>
@@ -136,42 +136,42 @@ export default function ReviewsTab() {
         <table className="w-full text-left text-sm">
           <thead className="bg-stone-50 text-stone-500 border-b border-stone-200">
             <tr>
-              <th className="px-6 py-4 font-medium">Cliente</th>
-              <th className="px-6 py-4 font-medium">Calificación</th>
-              <th className="px-6 py-4 font-medium">Comentario</th>
-              <th className="px-6 py-4 font-medium">Estado</th>
-              <th className="px-6 py-4 font-medium text-right">Acciones</th>
+              <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider">Cliente</th>
+              <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider">Calificación</th>
+              <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider">Comentario</th>
+              <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider">Estado</th>
+              <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
             {reviews.map(review => (
-              <tr key={review.id} className="hover:bg-stone-50">
-                <td className="px-6 py-4 font-medium text-stone-900">{review.customerName}</td>
-                <td className="px-6 py-4">
+              <tr key={review.id} className="hover:bg-stone-50 transition-colors">
+                <td className="px-4 py-3 font-bold text-stone-900 text-xs">{review.customerName}</td>
+                <td className="px-4 py-3">
                   <div className="flex items-center">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} size={14} className={i < review.rating ? "text-[#FDE047] fill-[#FDE047]" : "text-stone-300"} />
+                      <Star key={i} size={12} className={i < review.rating ? "text-[#FDE047] fill-[#FDE047]" : "text-stone-300"} />
                     ))}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-stone-600 max-w-xs truncate" title={review.text}>{review.text}</td>
-                <td className="px-6 py-4">
+                <td className="px-4 py-3 text-stone-600 max-w-xs truncate text-xs" title={review.text}>{review.text}</td>
+                <td className="px-4 py-3">
                   <button 
                     onClick={() => toggleVisibility(review)}
-                    className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${review.isVisible ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'}`}
+                    className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider transition-colors ${review.isVisible ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'}`}
                   >
                     {review.isVisible ? 'Visible' : 'Oculto'}
                   </button>
                 </td>
-                <td className="px-6 py-4 text-right">
-                  <button onClick={() => { setIsAdding(false); setEditingReview(review); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-stone-400 hover:text-blue-600 p-1"><Edit2 size={16} /></button>
-                  <button onClick={() => handleDelete(review.id!)} className="text-stone-400 hover:text-red-600 p-1 ml-2"><Trash2 size={16} /></button>
+                <td className="px-4 py-3 text-right">
+                  <button onClick={() => { setIsAdding(false); setEditingReview(review); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-stone-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-blue-50 transition-colors"><Edit2 size={16} /></button>
+                  <button onClick={() => handleDelete(review.id!)} className="text-stone-400 hover:text-red-600 p-1.5 ml-1 rounded-lg hover:bg-red-50 transition-colors"><Trash2 size={16} /></button>
                 </td>
               </tr>
             ))}
             {reviews.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-stone-500">No hay reseñas. Agrega una nueva.</td>
+                <td colSpan={5} className="px-4 py-8 text-center text-stone-500 text-sm">No hay reseñas. Agrega una nueva.</td>
               </tr>
             )}
           </tbody>
@@ -179,40 +179,40 @@ export default function ReviewsTab() {
       </div>
 
       {/* Mobile List */}
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden space-y-2">
         {reviews.map(review => (
-          <div key={review.id} className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm space-y-3">
+          <div key={review.id} className="bg-white p-3 rounded-xl border border-stone-200 shadow-sm space-y-2">
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="font-bold text-stone-900">{review.customerName}</h3>
-                <div className="flex items-center mt-1">
+                <h3 className="font-bold text-stone-900 text-sm">{review.customerName}</h3>
+                <div className="flex items-center mt-0.5">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} size={12} className={i < review.rating ? "text-[#FDE047] fill-[#FDE047]" : "text-stone-300"} />
+                    <Star key={i} size={10} className={i < review.rating ? "text-[#FDE047] fill-[#FDE047]" : "text-stone-300"} />
                   ))}
                 </div>
               </div>
               <button 
                 onClick={() => toggleVisibility(review)}
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors ${review.isVisible ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-700'}`}
+                className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-colors ${review.isVisible ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-700'}`}
               >
                 {review.isVisible ? 'Visible' : 'Oculto'}
               </button>
             </div>
             
-            <p className="text-sm text-stone-600 line-clamp-3 italic">"{review.text}"</p>
+            <p className="text-xs text-stone-600 line-clamp-2 italic">"{review.text}"</p>
             
-            <div className="flex justify-end gap-2 pt-2 border-t border-stone-100">
-              <button onClick={() => { setIsAdding(false); setEditingReview(review); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 text-stone-400 hover:text-blue-600">
-                <Edit2 size={18} />
+            <div className="flex justify-end gap-1 pt-2 border-t border-stone-50">
+              <button onClick={() => { setIsAdding(false); setEditingReview(review); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-1.5 text-stone-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+                <Edit2 size={16} />
               </button>
-              <button onClick={() => handleDelete(review.id!)} className="p-2 text-stone-400 hover:text-red-600">
-                <Trash2 size={18} />
+              <button onClick={() => handleDelete(review.id!)} className="p-1.5 text-stone-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors">
+                <Trash2 size={16} />
               </button>
             </div>
           </div>
         ))}
         {reviews.length === 0 && (
-          <div className="p-8 text-center text-stone-500 bg-white rounded-xl border border-stone-200">
+          <div className="p-6 text-center text-stone-500 text-sm bg-white rounded-xl border border-stone-200">
             No hay reseñas. Agrega una nueva.
           </div>
         )}

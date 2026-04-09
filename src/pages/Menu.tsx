@@ -1080,6 +1080,25 @@ export default function Menu() {
 
             <form onSubmit={(e) => {
               e.preventDefault();
+              
+              if (checkoutStep === 2 && deliveryType === 'domicilio' && !location) {
+                showConfirm(
+                  "Ubicación no compartida",
+                  "No has compartido tu ubicación GPS. Esto nos ayuda a entregar tu pedido más rápido y con mayor precisión. ¿Deseas compartirla ahora?",
+                  () => {
+                    getLocation();
+                  },
+                  {
+                    confirmText: "Compartir ubicación",
+                    cancelText: "Continuar sin ubicación",
+                    onCancel: () => {
+                      setCheckoutStep(3);
+                    }
+                  }
+                );
+                return;
+              }
+
               if (checkoutStep < 3) {
                 setCheckoutStep((checkoutStep + 1) as any);
               } else {

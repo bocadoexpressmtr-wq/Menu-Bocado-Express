@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Coupon } from '../../types';
-import { Plus, Edit2, Trash2, X, Check, Tag } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Check, Tag, Save } from 'lucide-react';
 import { useDialog } from '../../context/DialogContext';
 
 export default function CouponsTab() {
@@ -217,7 +217,7 @@ export default function CouponsTab() {
                   type="submit"
                   className="bg-stone-900 text-white px-8 py-3 rounded-2xl flex items-center gap-2 hover:bg-stone-800 font-black uppercase tracking-wider text-xs shadow-lg shadow-stone-200 transition-all active:scale-95"
                 >
-                  {editingId ? 'Actualizar Cupón' : 'Guardar Cupón'}
+                  <Save size={18} /> Guardar Cambios
                 </button>
               </div>
             </form>
@@ -227,62 +227,62 @@ export default function CouponsTab() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-stone-50 border-b border-stone-100">
-                <th className="p-4 font-semibold text-stone-600">Código</th>
-                <th className="p-4 font-semibold text-stone-600">Descuento</th>
-                <th className="p-4 font-semibold text-stone-600">Compra Mín.</th>
-                <th className="p-4 font-semibold text-stone-600">Vence</th>
-                <th className="p-4 font-semibold text-stone-600">Estado</th>
-                <th className="p-4 font-semibold text-stone-600 text-right">Acciones</th>
+                <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider text-stone-500">Código</th>
+                <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider text-stone-500">Descuento</th>
+                <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider text-stone-500">Compra Mín.</th>
+                <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider text-stone-500">Vence</th>
+                <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider text-stone-500">Estado</th>
+                <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider text-stone-500 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {coupons.map(coupon => (
                 <tr key={coupon.id} className="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
-                  <td className="p-4">
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <Tag size={16} className="text-stone-400" />
+                      <Tag size={14} className="text-stone-400" />
                       <span className="font-bold text-stone-800">{coupon.code}</span>
                     </div>
                   </td>
-                  <td className="p-4 text-stone-600">
+                  <td className="px-4 py-3 text-stone-600 font-medium">
                     {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `$${coupon.discountValue.toLocaleString()}`}
                   </td>
-                  <td className="p-4 text-stone-600">
+                  <td className="px-4 py-3 text-stone-600 font-medium">
                     ${coupon.minOrderValue.toLocaleString()}
                   </td>
-                  <td className="p-4 text-stone-600 text-xs">
+                  <td className="px-4 py-3 text-stone-600 text-xs">
                     {coupon.expiryDate ? new Date(coupon.expiryDate).toLocaleDateString() : 'Nunca'}
                   </td>
-                  <td className="p-4">
+                  <td className="px-4 py-3">
                     <button
                       onClick={() => toggleActive(coupon)}
-                      className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${
                         coupon.isActive 
-                          ? 'bg-green-100 text-green-700' 
+                          ? 'bg-emerald-100 text-emerald-700' 
                           : 'bg-stone-100 text-stone-500'
                       }`}
                     >
                       {coupon.isActive ? 'ACTIVO' : 'INACTIVO'}
                     </button>
                   </td>
-                  <td className="p-4 text-right">
+                  <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-1">
                       <button
                         onClick={() => editCoupon(coupon)}
-                        className="p-2.5 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-xl transition-all active:scale-90"
+                        className="p-1.5 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-lg transition-all active:scale-90"
                         title="Editar"
                       >
-                        <Edit2 size={18} />
+                        <Edit2 size={16} />
                       </button>
                       <button
                         onClick={() => handleDelete(coupon.id!)}
-                        className="p-2.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all active:scale-90"
+                        className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all active:scale-90"
                         title="Eliminar"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </td>
@@ -290,7 +290,7 @@ export default function CouponsTab() {
               ))}
               {coupons.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-stone-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-stone-500 text-sm">
                     No hay cupones registrados.
                   </td>
                 </tr>

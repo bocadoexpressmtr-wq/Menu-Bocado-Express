@@ -80,44 +80,44 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
   };
 
   return (
-    <div className="max-w-4xl space-y-8 pb-20">
+    <div className="max-w-4xl space-y-6 pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-black text-stone-900 tracking-tight">Configuración General</h2>
-          <p className="text-stone-500 text-sm">Personaliza el funcionamiento de tu restaurante</p>
+          <h2 className="text-2xl font-black text-stone-900 tracking-tight">Configuración General</h2>
+          <p className="text-stone-500 text-xs">Personaliza el funcionamiento de tu restaurante</p>
         </div>
         {showSuccess && (
-          <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-2xl border border-emerald-100 animate-in fade-in slide-in-from-top-2">
-            <CheckCircle size={16} />
-            <span className="text-xs font-black uppercase tracking-wider">Guardado con éxito</span>
+          <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-100 animate-in fade-in slide-in-from-top-2">
+            <CheckCircle size={14} />
+            <span className="text-[10px] font-black uppercase tracking-wider">Guardado con éxito</span>
           </div>
         )}
       </div>
 
-      <form onSubmit={handleSave} className="space-y-8">
+      <form onSubmit={handleSave} className="space-y-6">
         {/* Store Status Card */}
-        <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-stone-100 overflow-hidden relative group">
-          <div className="flex items-start justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-stone-50 rounded-2xl flex items-center justify-center text-stone-400 group-hover:bg-stone-900 group-hover:text-white transition-all duration-300">
-                <Store size={24} />
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 overflow-hidden relative group">
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover:bg-stone-900 group-hover:text-white transition-all duration-300">
+                <Store size={20} />
               </div>
               <div>
-                <h3 className="text-xl font-black text-stone-900">Estado del Local</h3>
-                <p className="text-stone-400 text-xs font-medium">Controla si el restaurante está aceptando pedidos</p>
+                <h3 className="text-lg font-black text-stone-900">Estado del Local</h3>
+                <p className="text-stone-400 text-[10px] font-medium">Controla si el restaurante está aceptando pedidos</p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="flex gap-4">
+          <div className="space-y-4">
+            <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setEditingSettings({...editingSettings, storeStatusMode: 'manual'})}
                 className={cn(
-                  "flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all",
+                  "flex-1 py-2 px-3 rounded-lg font-bold text-xs transition-all",
                   (!editingSettings.storeStatusMode || editingSettings.storeStatusMode === 'manual')
-                    ? "bg-stone-900 text-white shadow-md"
+                    ? "bg-stone-900 text-white shadow-sm"
                     : "bg-stone-100 text-stone-500 hover:bg-stone-200"
                 )}
               >
@@ -127,9 +127,9 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
                 type="button"
                 onClick={() => setEditingSettings({...editingSettings, storeStatusMode: 'auto'})}
                 className={cn(
-                  "flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all",
+                  "flex-1 py-2 px-3 rounded-lg font-bold text-xs transition-all",
                   editingSettings.storeStatusMode === 'auto'
-                    ? "bg-stone-900 text-white shadow-md"
+                    ? "bg-stone-900 text-white shadow-sm"
                     : "bg-stone-100 text-stone-500 hover:bg-stone-200"
                 )}
               >
@@ -141,58 +141,58 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
               <div 
                 onClick={() => setEditingSettings({...editingSettings, isStoreOpen: !editingSettings.isStoreOpen})}
                 className={cn(
-                  "p-6 rounded-3xl border-2 transition-all cursor-pointer flex items-center justify-between group/toggle",
+                  "p-4 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between group/toggle",
                   editingSettings.isStoreOpen 
                     ? "bg-emerald-50/50 border-emerald-100 hover:border-emerald-200" 
                     : "bg-red-50/50 border-red-100 hover:border-red-200"
                 )}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <div className={cn(
-                    "w-4 h-4 rounded-full animate-pulse",
+                    "w-3 h-3 rounded-full animate-pulse",
                     editingSettings.isStoreOpen ? "bg-emerald-500" : "bg-red-500"
                   )} />
                   <div>
                     <p className={cn(
-                      "text-sm font-black uppercase tracking-widest",
+                      "text-xs font-black uppercase tracking-widest",
                       editingSettings.isStoreOpen ? "text-emerald-700" : "text-red-700"
                     )}>
                       {editingSettings.isStoreOpen ? 'Abierto' : 'Cerrado'}
                     </p>
-                    <p className="text-xs text-stone-500 font-medium">
+                    <p className="text-[10px] text-stone-500 font-medium">
                       {editingSettings.isStoreOpen ? 'Los clientes pueden realizar pedidos normalmente.' : 'Los clientes verán un aviso de local cerrado.'}
                     </p>
                   </div>
                 </div>
                 
                 <div className={cn(
-                  "w-14 h-8 rounded-full p-1 transition-all duration-300",
+                  "w-10 h-6 rounded-full p-1 transition-all duration-300",
                   editingSettings.isStoreOpen ? "bg-emerald-500" : "bg-stone-200"
                 )}>
                   <div className={cn(
-                    "w-6 h-6 bg-white rounded-full shadow-sm transition-all duration-300",
-                    editingSettings.isStoreOpen ? "translate-x-6" : "translate-x-0"
+                    "w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300",
+                    editingSettings.isStoreOpen ? "translate-x-4" : "translate-x-0"
                   )} />
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4 p-6 bg-stone-50 rounded-3xl border border-stone-100">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Hora de Apertura</label>
+              <div className="grid grid-cols-2 gap-3 p-4 bg-stone-50 rounded-xl border border-stone-100">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Hora de Apertura</label>
                   <input 
                     type="time" 
                     value={editingSettings.autoOpenTime || '12:00'} 
                     onChange={e => setEditingSettings({...editingSettings, autoOpenTime: e.target.value})} 
-                    className="w-full px-6 py-4 bg-white border border-stone-200 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm" 
+                    className="w-full px-4 py-2 bg-white border border-stone-200 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-xs" 
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Hora de Cierre</label>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Hora de Cierre</label>
                   <input 
                     type="time" 
                     value={editingSettings.autoCloseTime || '22:00'} 
                     onChange={e => setEditingSettings({...editingSettings, autoCloseTime: e.target.value})} 
-                    className="w-full px-6 py-4 bg-white border border-stone-200 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm" 
+                    className="w-full px-4 py-2 bg-white border border-stone-200 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-xs" 
                   />
                 </div>
               </div>
@@ -201,69 +201,69 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
         </div>
 
         {/* Custom Messages Card */}
-        <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-stone-100 group">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 bg-stone-50 rounded-2xl flex items-center justify-center text-stone-400 group-hover:bg-stone-900 group-hover:text-white transition-all duration-300">
-              <MessageSquare size={24} />
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 group">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover:bg-stone-900 group-hover:text-white transition-all duration-300">
+              <MessageSquare size={20} />
             </div>
             <div>
-              <h3 className="text-xl font-black text-stone-900">Mensajes Personalizados</h3>
-              <p className="text-stone-400 text-xs font-medium">Personaliza los textos que ven tus clientes</p>
+              <h3 className="text-lg font-black text-stone-900">Mensajes Personalizados</h3>
+              <p className="text-stone-400 text-[10px] font-medium">Personaliza los textos que ven tus clientes</p>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Número de WhatsApp (con código de país, ej: 573000000000)</label>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Número de WhatsApp (con código de país, ej: 573000000000)</label>
               <input 
                 type="text" 
                 value={editingSettings.whatsappNumber || ''} 
                 onChange={e => setEditingSettings({...editingSettings, whatsappNumber: e.target.value})} 
-                className="w-full px-6 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm" 
+                className="w-full px-4 py-2 bg-stone-50 border border-stone-100 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-xs" 
                 placeholder="573144052399"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Número de Nequi / Transferencia</label>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Número de Nequi / Transferencia</label>
               <input 
                 type="text" 
                 value={editingSettings.nequiNumber || ''} 
                 onChange={e => setEditingSettings({...editingSettings, nequiNumber: e.target.value})} 
-                className="w-full px-6 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm" 
+                className="w-full px-4 py-2 bg-stone-50 border border-stone-100 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-xs" 
                 placeholder="3124726152"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Encabezado WhatsApp</label>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Encabezado WhatsApp</label>
               <input 
                 type="text" 
                 value={editingSettings.whatsappMessageHeader || ''} 
                 onChange={e => setEditingSettings({...editingSettings, whatsappMessageHeader: e.target.value})} 
-                className="w-full px-6 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm" 
+                className="w-full px-4 py-2 bg-stone-50 border border-stone-100 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-xs" 
                 placeholder="🥪 *NUEVO PEDIDO - BOCADO EXPRESS*"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Pie de Mensaje WhatsApp</label>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Pie de Mensaje WhatsApp</label>
               <input 
                 type="text" 
                 value={editingSettings.whatsappMessageFooter || ''} 
                 onChange={e => setEditingSettings({...editingSettings, whatsappMessageFooter: e.target.value})} 
-                className="w-full px-6 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm" 
+                className="w-full px-4 py-2 bg-stone-50 border border-stone-100 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-xs" 
                 placeholder="Vengo de Menú Digital Bocado Express"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Texto de Compartir</label>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Texto de Compartir</label>
               <textarea 
                 rows={2}
                 value={editingSettings.shareText || ''} 
                 onChange={e => setEditingSettings({...editingSettings, shareText: e.target.value})} 
-                className="w-full px-6 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-sm resize-none" 
+                className="w-full px-4 py-2 bg-stone-50 border border-stone-100 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-xs resize-none" 
                 placeholder="Los mejores cubanos y suizos de la ciudad"
               />
             </div>
@@ -271,32 +271,32 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
         </div>
 
         {/* Social Links Card */}
-        <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-stone-100 group">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-stone-50 rounded-2xl flex items-center justify-center text-stone-400 group-hover:bg-stone-900 group-hover:text-white transition-all duration-300">
-                <Share2 size={24} />
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 group">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover:bg-stone-900 group-hover:text-white transition-all duration-300">
+                <Share2 size={20} />
               </div>
               <div>
-                <h3 className="text-xl font-black text-stone-900">Redes Sociales</h3>
-                <p className="text-stone-400 text-xs font-medium">Configura los enlaces de tu pie de página</p>
+                <h3 className="text-lg font-black text-stone-900">Redes Sociales</h3>
+                <p className="text-stone-400 text-[10px] font-medium">Configura los enlaces de tu pie de página</p>
               </div>
             </div>
             <button 
               type="button"
               onClick={addSocialLink}
-              className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-stone-800 transition-all active:scale-95"
+              className="flex items-center gap-1.5 bg-stone-900 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-stone-800 transition-all active:scale-95"
             >
-              <Plus size={14} />
+              <Plus size={12} />
               Agregar Red
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {(editingSettings.socialLinks || []).map((link) => (
-              <div key={link.id} className="flex flex-col md:flex-row items-center gap-4 p-6 bg-stone-50 rounded-3xl border border-stone-100 group/link">
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-stone-900 shadow-sm">
+              <div key={link.id} className="flex flex-col md:flex-row items-center gap-3 p-4 bg-stone-50 rounded-xl border border-stone-100 group/link">
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                  <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-stone-900 shadow-sm">
                     {getIcon(link.icon)}
                   </div>
                   <select 
@@ -312,7 +312,7 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
                       if (platform === 'Twitter') icon = 'Twitter';
                       updateSocialLink(link.id, { platform, icon });
                     }}
-                    className="bg-transparent font-black text-xs uppercase tracking-widest outline-none cursor-pointer"
+                    className="bg-transparent font-black text-[10px] uppercase tracking-widest outline-none cursor-pointer"
                   >
                     <option value="Instagram">Instagram</option>
                     <option value="Facebook">Facebook</option>
@@ -329,43 +329,43 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
                   value={link.url}
                   onChange={e => updateSocialLink(link.id, { url: e.target.value })}
                   placeholder="https://..."
-                  className="flex-1 w-full px-4 py-2 bg-white border border-stone-100 rounded-xl text-sm font-medium focus:ring-2 focus:ring-stone-900 outline-none transition-all"
+                  className="flex-1 w-full px-3 py-1.5 bg-white border border-stone-100 rounded-lg text-xs font-medium focus:ring-2 focus:ring-stone-900 outline-none transition-all"
                 />
 
                 <button 
                   type="button"
                   onClick={() => removeSocialLink(link.id)}
-                  className="p-2 text-stone-300 hover:text-red-500 transition-colors"
+                  className="p-1.5 text-stone-300 hover:text-red-500 transition-colors"
                 >
-                  <Trash2 size={18} />
+                  <Trash2 size={16} />
                 </button>
               </div>
             ))}
 
             {(editingSettings.socialLinks || []).length === 0 && (
-              <div className="text-center py-12 border-2 border-dashed border-stone-100 rounded-[2rem]">
-                <p className="text-stone-400 text-sm font-medium">No has configurado redes sociales aún.</p>
+              <div className="text-center py-8 border-2 border-dashed border-stone-100 rounded-xl">
+                <p className="text-stone-400 text-xs font-medium">No has configurado redes sociales aún.</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Danger Zone */}
-        <div className="bg-red-50/30 p-8 rounded-[2rem] border border-red-100 group">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center text-red-500">
-              <AlertTriangle size={24} />
+        <div className="bg-red-50/30 p-6 rounded-2xl border border-red-100 group">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-red-500">
+              <AlertTriangle size={20} />
             </div>
             <div>
-              <h3 className="text-xl font-black text-red-900">Zona de Peligro</h3>
-              <p className="text-red-400 text-xs font-medium">Acciones irreversibles de mantenimiento</p>
+              <h3 className="text-lg font-black text-red-900">Zona de Peligro</h3>
+              <p className="text-red-400 text-[10px] font-medium">Acciones irreversibles de mantenimiento</p>
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-6 bg-white rounded-3xl border border-red-100">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-white rounded-xl border border-red-100">
             <div>
-              <p className="text-sm font-black text-stone-900 mb-1 uppercase tracking-tight">Limpieza de Historial</p>
-              <p className="text-xs text-stone-500 font-medium">Elimina pedidos completados con más de 30 días.</p>
+              <p className="text-xs font-black text-stone-900 mb-0.5 uppercase tracking-tight">Limpieza de Historial</p>
+              <p className="text-[10px] text-stone-500 font-medium">Elimina pedidos completados con más de 30 días.</p>
             </div>
             <button 
               type="button"
@@ -378,9 +378,9 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
                   }
                 );
               }}
-              className="w-full md:w-auto bg-red-50 text-red-600 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+              className="w-full md:w-auto bg-red-50 text-red-600 px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-all flex items-center justify-center gap-1.5"
             >
-              <Trash2 size={16} />
+              <Trash2 size={14} />
               Ejecutar Limpieza
             </button>
           </div>
@@ -391,9 +391,9 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
           <button 
             type="submit" 
             disabled={isSaving}
-            className="bg-stone-900 text-white px-10 py-4 rounded-2xl flex items-center gap-3 hover:bg-stone-800 font-black uppercase tracking-widest text-xs shadow-2xl shadow-stone-400 transition-all active:scale-95 disabled:opacity-50"
+            className="bg-stone-900 text-white px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-stone-800 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-stone-400 transition-all active:scale-95 disabled:opacity-50"
           >
-            {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {isSaving ? 'Guardando...' : 'Guardar Cambios'}
           </button>
         </div>

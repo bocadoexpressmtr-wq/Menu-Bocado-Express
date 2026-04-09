@@ -256,15 +256,15 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
         <div className="flex items-center gap-4 px-4">
           <button 
             onClick={toggleSelectAll}
-            className="flex items-center gap-2 text-xs font-bold text-stone-500 hover:text-stone-900 transition-colors"
+            className="flex items-center gap-2 text-[10px] font-bold text-stone-500 hover:text-stone-900 transition-colors uppercase tracking-wider"
           >
-            {selectedOrders.length === visibleOrders.length ? <CheckSquare size={18} className="text-stone-900" /> : <Square size={18} />}
+            {selectedOrders.length === visibleOrders.length ? <CheckSquare size={16} className="text-stone-900" /> : <Square size={16} />}
             {selectedOrders.length === visibleOrders.length ? 'Deseleccionar Todo' : 'Seleccionar Todo'}
           </button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 gap-3 md:gap-4">
         {visibleOrders.length === 0 ? (
           <div className="bg-white rounded-2xl border border-stone-100 p-8 md:p-12 text-center">
             <div className="w-12 h-12 md:w-16 md:h-16 bg-stone-50 rounded-full flex items-center justify-center text-stone-200 mx-auto mb-4">
@@ -275,32 +275,32 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
         ) : (
           visibleOrders.map(order => (
             <div key={order.id} className={cn(
-              "bg-white rounded-2xl shadow-sm border transition-all duration-300 overflow-hidden group relative",
-              order.status === 'completed' ? 'border-stone-100 opacity-75 grayscale-[0.5]' : 'border-stone-200 hover:shadow-lg hover:shadow-stone-200/30',
+              "bg-white rounded-xl shadow-sm border transition-all duration-300 overflow-hidden group relative",
+              order.status === 'completed' ? 'border-stone-100 opacity-75 grayscale-[0.5]' : 'border-stone-200 hover:shadow-md hover:shadow-stone-200/30',
               selectedOrders.includes(order.id!) && 'ring-2 ring-stone-900 border-transparent'
             )}>
               {/* Selection Checkbox */}
               <button 
                 onClick={() => toggleSelect(order.id!)}
-                className="absolute top-4 left-4 z-10 p-1 bg-white rounded-lg shadow-sm border border-stone-100 text-stone-400 hover:text-stone-900 transition-colors"
+                className="absolute top-3 left-3 z-10 p-1 bg-white rounded-md shadow-sm border border-stone-100 text-stone-400 hover:text-stone-900 transition-colors"
               >
-                {selectedOrders.includes(order.id!) ? <CheckSquare size={16} className="text-stone-900" /> : <Square size={16} />}
+                {selectedOrders.includes(order.id!) ? <CheckSquare size={14} className="text-stone-900" /> : <Square size={14} />}
               </button>
 
               {/* Card Header */}
-              <div className="p-4 md:p-6 pl-12 md:pl-16 border-b border-stone-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="p-3 md:p-4 pl-10 md:pl-12 border-b border-stone-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div className="flex items-start gap-3 w-full sm:w-auto">
                   <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center font-black text-base shadow-sm shrink-0",
+                    "w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs shadow-sm shrink-0",
                     order.status === 'completed' ? 'bg-stone-100 text-stone-400' : 'bg-stone-900 text-white'
                   )}>
                     {order.customerName ? order.customerName.charAt(0) : '?'}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                      <h3 className="font-black text-base md:text-lg text-stone-900 leading-tight truncate">{order.customerName}</h3>
+                      <h3 className="font-black text-sm md:text-base text-stone-900 leading-tight truncate">{order.customerName}</h3>
                       <span className={cn(
-                        "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-1 border",
+                        "px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest flex items-center gap-1 border",
                         order.status === 'completed' 
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                           : 'bg-amber-50 text-amber-700 border-amber-100 animate-pulse'
@@ -309,7 +309,7 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
                         {order.status === 'completed' ? 'Entregado' : 'Pendiente'}
                       </span>
                     </div>
-                    <p className="text-stone-400 text-[10px] md:text-xs font-medium flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                    <p className="text-stone-400 text-[10px] font-medium flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                       <a 
                         href={`https://wa.me/${order.customerPhone.replace(/\D/g, '')}`} 
                         target="_blank" 
@@ -331,20 +331,20 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end">
                   {order.status === 'pending' && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       {confirmingOrder === order.id ? (
                         <div className="flex items-center gap-1 animate-in zoom-in-95 duration-200">
                           <button 
                             onClick={() => handleComplete(order)}
-                            className="bg-emerald-600 text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-emerald-700 transition-all shadow-md"
+                            className="bg-emerald-600 text-white px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-emerald-700 transition-all shadow-sm"
                           >
                             Sí
                           </button>
                           <button 
                             onClick={() => setConfirmingOrder(null)}
-                            className="bg-stone-100 text-stone-600 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-stone-200 transition-all"
+                            className="bg-stone-100 text-stone-600 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-stone-200 transition-all"
                           >
                             No
                           </button>
@@ -352,9 +352,9 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
                       ) : (
                         <button 
                           onClick={() => setConfirmingOrder(order.id!)}
-                          className="bg-emerald-500 text-white px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs font-black hover:bg-emerald-600 transition-all shadow-md shadow-emerald-100 flex items-center gap-1.5 active:scale-95"
+                          className="bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black hover:bg-emerald-600 transition-all shadow-sm shadow-emerald-100 flex items-center gap-1.5 active:scale-95"
                         >
-                          <CheckCircle size={14} />
+                          <CheckCircle size={12} />
                           <span className="hidden xs:inline">Completar</span>
                           <span className="xs:hidden">OK</span>
                         </button>
@@ -364,19 +364,19 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
                   <button 
                     onClick={() => handleArchive(order.id!, order.status)}
                     className={cn(
-                      "p-2 rounded-xl transition-all active:scale-95",
+                      "p-1.5 rounded-lg transition-all active:scale-95",
                       order.status === 'archived' ? "text-emerald-600 bg-emerald-50" : "text-stone-300 hover:text-stone-600 hover:bg-stone-50"
                     )}
                     title={order.status === 'archived' ? "Desarchivar" : "Archivar"}
                   >
-                    <Archive size={18} />
+                    <Archive size={16} />
                   </button>
                   <button 
                     onClick={() => handleDelete(order.id!)}
-                    className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all active:scale-95"
+                    className="p-1.5 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-95"
                     title="Eliminar"
                   >
-                    <Trash2 size={18} />
+                    <Trash2 size={16} />
                   </button>
                 </div>
               </div>
@@ -384,19 +384,19 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
               {/* Card Body */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
                 {/* Items List */}
-                <div className="lg:col-span-7 p-4 md:p-6 border-b lg:border-b-0 lg:border-r border-stone-50">
-                  <h4 className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em] mb-3">Detalle</h4>
-                  <div className="space-y-2.5">
+                <div className="lg:col-span-7 p-3 md:p-4 border-b lg:border-b-0 lg:border-r border-stone-50">
+                  <h4 className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em] mb-2">Detalle</h4>
+                  <div className="space-y-2">
                     {order.items.map((item: any, i: number) => (
                       <div key={i} className="group/item">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 bg-stone-50 rounded-lg flex items-center justify-center text-stone-400 font-black text-[10px] group-hover/item:bg-stone-900 group-hover/item:text-white transition-colors">
+                            <div className="w-5 h-5 bg-stone-50 rounded-md flex items-center justify-center text-stone-400 font-black text-[10px] group-hover/item:bg-stone-900 group-hover/item:text-white transition-colors">
                               {item.quantity}
                             </div>
-                            <span className="font-bold text-stone-700 text-sm">{item.name}</span>
+                            <span className="font-bold text-stone-700 text-xs">{item.name}</span>
                           </div>
-                          <span className="text-stone-400 font-medium text-xs">{formatPrice(item.price * item.quantity)}</span>
+                          <span className="text-stone-400 font-medium text-[10px]">{formatPrice(item.price * item.quantity)}</span>
                         </div>
                         {item.selections && item.selections.length > 0 && (
                           <div className="ml-8 mt-1 flex flex-wrap gap-1">
@@ -415,44 +415,44 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
                     ))}
                   </div>
                   
-                  <div className="mt-4 pt-4 border-t border-stone-50 flex justify-between items-end">
+                  <div className="mt-3 pt-3 border-t border-stone-50 flex justify-between items-end">
                     <div>
-                      <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">Total a cobrar</p>
-                      <p className="text-3xl font-black text-stone-900">{formatPrice(order.totalAmount)}</p>
+                      <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-0.5">Total a cobrar</p>
+                      <p className="text-xl font-black text-stone-900">{formatPrice(order.totalAmount)}</p>
                     </div>
                     {order.loyaltyOptIn && (
-                      <div className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border border-emerald-100 flex items-center gap-1.5">
-                        <Trophy size={12} />
+                      <div className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider border border-emerald-100 flex items-center gap-1">
+                        <Trophy size={10} />
                         Suma Sello
                       </div>
                     )}
                   </div>
 
                   {order.notes && (
-                    <div className="mt-6 p-4 bg-amber-50/50 border border-amber-100 rounded-2xl">
-                      <div className="flex items-center gap-2 mb-1">
-                        <MessageSquare size={14} className="text-amber-600" />
-                        <h4 className="font-black text-amber-800 text-[10px] uppercase tracking-wider">Notas del cliente</h4>
+                    <div className="mt-3 p-3 bg-amber-50/50 border border-amber-100 rounded-xl">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <MessageSquare size={12} className="text-amber-600" />
+                        <h4 className="font-black text-amber-800 text-[9px] uppercase tracking-wider">Notas del cliente</h4>
                       </div>
-                      <p className="text-sm text-amber-900/80 font-medium leading-relaxed">{order.notes}</p>
+                      <p className="text-xs text-amber-900/80 font-medium leading-relaxed">{order.notes}</p>
                     </div>
                   )}
                 </div>
                 
                 {/* Delivery Info */}
-                <div className="lg:col-span-5 p-6 md:p-8 bg-stone-50/30">
-                  <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] mb-4">Información de Entrega</h4>
+                <div className="lg:col-span-5 p-4 md:p-6 bg-stone-50/30">
+                  <h4 className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em] mb-3">Información de Entrega</h4>
                   
-                  <div className="space-y-6">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-stone-400">
-                        {order.deliveryType === 'domicilio' ? <Bike size={20} /> : <Store size={20} />}
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-8 h-8 bg-white rounded-lg shadow-sm flex items-center justify-center text-stone-400 shrink-0">
+                        {order.deliveryType === 'domicilio' ? <Bike size={16} /> : <Store size={16} />}
                       </div>
                       <div>
-                        <p className="text-xs font-black text-stone-900 uppercase tracking-tight mb-1">
+                        <p className="text-[10px] font-black text-stone-900 uppercase tracking-tight mb-0.5">
                           {order.deliveryType === 'domicilio' ? 'Envío a Domicilio' : order.deliveryType === 'recoger' ? 'Recoge en Local' : 'Consumo en Local'}
                         </p>
-                        <p className="text-sm text-stone-500 font-medium leading-snug">
+                        <p className="text-xs text-stone-500 font-medium leading-snug">
                           {order.customerAddress || 'Sin dirección (Recogida)'}
                         </p>
                         {order.location && (
@@ -460,9 +460,9 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
                             href={`https://maps.google.com/?q=${order.location.lat},${order.location.lng}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 mt-3 text-xs text-blue-600 hover:text-blue-700 font-black uppercase tracking-wider group/link"
+                            className="inline-flex items-center gap-1 mt-2 text-[10px] text-blue-600 hover:text-blue-700 font-black uppercase tracking-wider group/link"
                           >
-                            <MapPin size={14} />
+                            <MapPin size={12} />
                             Ver Ubicación GPS
                             <span className="block w-0 h-0.5 bg-blue-600 group-hover/link:w-full transition-all duration-300" />
                           </a>
@@ -470,15 +470,15 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-stone-400">
-                        <Wallet size={20} />
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-8 h-8 bg-white rounded-lg shadow-sm flex items-center justify-center text-stone-400 shrink-0">
+                        <Wallet size={16} />
                       </div>
                       <div>
-                        <p className="text-xs font-black text-stone-900 uppercase tracking-tight mb-1">Método de Pago</p>
-                        <p className="text-sm text-stone-500 font-bold capitalize">{order.paymentMethod}</p>
+                        <p className="text-[10px] font-black text-stone-900 uppercase tracking-tight mb-0.5">Método de Pago</p>
+                        <p className="text-xs text-stone-500 font-bold capitalize">{order.paymentMethod}</p>
                         {order.cashAmount && (
-                          <p className="text-xs text-stone-400 mt-1">Paga con: <span className="text-stone-900 font-black">{formatPrice(order.cashAmount)}</span></p>
+                          <p className="text-[10px] text-stone-400 mt-0.5">Paga con: <span className="text-stone-900 font-black">{formatPrice(order.cashAmount)}</span></p>
                         )}
                       </div>
                     </div>
