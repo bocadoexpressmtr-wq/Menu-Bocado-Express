@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, onSnapshot, query, orderBy, addDoc, doc, getDoc, setDoc, getDocs, where, limit } from 'firebase/firestore';
+import { collection, query, orderBy, addDoc, doc, getDoc, setDoc, getDocs, where, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ShoppingCart, MapPin, Send, Plus, Minus, Trash2, CheckCircle2, Instagram, Facebook, Music2, Gift, Info, X, Store, Bike, UtensilsCrossed, Wallet, Banknote, PartyPopper, Star, Share2, Globe, MessageCircle, Youtube, Twitter, Tag, Download, MessageSquare, Search } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -121,23 +121,29 @@ export default function Menu() {
       if (storedRef) setReferredBy(storedRef);
     }
 
-    const unsubProducts = onSnapshot(collection(db, 'products'), (snap) => {
-      setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
-    }, (error) => console.error("Error fetching products", error));
+    const fetchData = async () => {
+      try {
+        // Fetch all data concurrently using Promise.all
+        const [productsSnap, categoriesSnap, reviewsSnap, settingsSnap] = await Promise.all([
+          getDocs(collection(db, 'products')),
+          getDocs(query(collection(db, 'categories'), orderBy('order'))),
+          getDocs(query(collection(db, 'reviews'), orderBy('createdAt', 'desc'), limit(10))),
+          getDoc(doc(db, 'settings', 'store'))
+        ]);
 
-    const unsubCategories = onSnapshot(query(collection(db, 'categories'), orderBy('order')), (snap) => {
-      setCategories(snap.docs.map(d => ({ id: d.id, ...d.data() } as Category)));
-    }, (error) => console.error("Error fetching categories", error));
+        setProducts(productsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
+        setCategories(categoriesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Category)));
+        setReviews(reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Review)).filter(rev => rev.isVisible));
 
-    const unsubReviews = onSnapshot(query(collection(db, 'reviews'), orderBy('createdAt', 'desc'), limit(50)), (snap) => {
-      setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() } as Review)).filter(rev => rev.isVisible));
-    }, (error) => console.error("Error fetching reviews", error));
-
-    const unsubSettings = onSnapshot(doc(db, 'settings', 'store'), (docSnap) => {
-      if (docSnap.exists()) {
-        setSettings(docSnap.data() as StoreSettings);
+        if (settingsSnap.exists()) {
+          setSettings(settingsSnap.data() as StoreSettings);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
       }
-    }, (error) => console.error("Error fetching settings", error));
+    };
+
+    fetchData();
 
     const checkCoupons = async () => {
       try {
@@ -171,10 +177,6 @@ export default function Menu() {
     }
 
     return () => {
-      unsubProducts();
-      unsubCategories();
-      unsubReviews();
-      unsubSettings();
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
