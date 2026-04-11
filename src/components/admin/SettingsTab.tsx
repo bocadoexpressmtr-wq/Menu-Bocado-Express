@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Save, Store, Shield, Trash2, AlertTriangle, CheckCircle, Loader2, MessageSquare, Share2, Plus, Globe, Instagram, Facebook, Music2, MessageCircle, Youtube, Twitter } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { StoreSettings, SocialLink } from '../../types';
 import { cn } from '../../lib/utils';
@@ -16,7 +16,7 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
     e.preventDefault();
     setIsSaving(true);
     try {
-      await updateDoc(doc(db, 'settings', 'store'), {
+      await setDoc(doc(db, 'settings', 'store'), {
         isStoreOpen: editingSettings.isStoreOpen,
         storeStatusMode: editingSettings.storeStatusMode || 'manual',
         autoOpenTime: editingSettings.autoOpenTime || '12:00',
@@ -27,7 +27,7 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
         whatsappMessageFooter: editingSettings.whatsappMessageFooter,
         shareText: editingSettings.shareText,
         socialLinks: editingSettings.socialLinks || []
-      });
+      }, { merge: true });
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {

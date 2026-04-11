@@ -43,21 +43,23 @@ export default function LoyaltyTab({ settings }: LoyaltyTabProps) {
 
   const toggleLoyalty = async () => {
     try {
-      await updateDoc(doc(db, 'settings', 'store'), {
+      await setDoc(doc(db, 'settings', 'store'), {
         loyaltyEnabled: !settings.loyaltyEnabled
-      });
-    } catch (error) {
+      }, { merge: true });
+    } catch (error: any) {
       console.error("Error updating loyalty setting:", error);
+      showAlert("Error", `No se pudo actualizar: ${error.message}`, "error");
     }
   };
 
   const toggleReferral = async () => {
     try {
-      await updateDoc(doc(db, 'settings', 'store'), {
+      await setDoc(doc(db, 'settings', 'store'), {
         referralEnabled: !settings.referralEnabled
-      });
-    } catch (error) {
+      }, { merge: true });
+    } catch (error: any) {
       console.error("Error updating referral setting:", error);
+      showAlert("Error", `No se pudo actualizar: ${error.message}`, "error");
     }
   };
 

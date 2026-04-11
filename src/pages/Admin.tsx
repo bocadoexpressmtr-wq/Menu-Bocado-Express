@@ -21,7 +21,7 @@ export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [settingsLoading, setSettingsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'products' | 'categories' | 'reviews' | 'settings' | 'loyalty' | 'coupons' | 'feedback'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'products' | 'categories' | 'reviews' | 'settings' | 'loyalty' | 'coupons' | 'feedback'>('settings');
   const [user, setUser] = useState(auth.currentUser);
 
   const [isSeeding, setIsSeeding] = useState(false);
