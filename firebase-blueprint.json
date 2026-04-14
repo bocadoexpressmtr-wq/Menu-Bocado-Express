@@ -285,6 +285,40 @@
         }
       },
       "required": ["customerName", "message", "type", "status", "createdAt"]
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "A discount coupon",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Coupon code (uppercase)"
+        },
+        "discountType": {
+          "type": "string",
+          "enum": ["percentage", "fixed"],
+          "description": "Type of discount"
+        },
+        "discountValue": {
+          "type": "number",
+          "description": "Value of the discount"
+        },
+        "minOrderValue": {
+          "type": "number",
+          "description": "Minimum order value to apply the coupon"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the coupon is active"
+        },
+        "expiryDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Expiry date of the coupon"
+        }
+      },
+      "required": ["code", "discountType", "discountValue", "isActive"]
     }
   },
   "firestore": {
@@ -319,6 +353,10 @@
     "feedback": {
       "schema": { "$ref": "#/entities/Feedback" },
       "description": "Customer feedback (complaints/suggestions)"
+    },
+    "coupons": {
+      "schema": { "$ref": "#/entities/Coupon" },
+      "description": "Discount coupons"
     }
   }
 }
