@@ -151,11 +151,15 @@ export default function Menu() {
         
         if (cachedSettingsData && cachedSettingsTimestamp) {
           const age = now - parseInt(cachedSettingsTimestamp, 10);
+          const parsedSettings = JSON.parse(cachedSettingsData);
+          
           if (age < 30 * 60 * 1000) {
             // Show cached settings immediately
-            setSettings(JSON.parse(cachedSettingsData));
+            setSettings(parsedSettings);
+            
+            // Special check for isStoreOpen (2 minutes cache)
             if (age < 2 * 60 * 1000) {
-              fetchSettings = false; // Less than 2 mins, no need to fetch
+              fetchSettings = false;
             }
           }
         }
@@ -421,7 +425,11 @@ export default function Menu() {
       const q = query(collection(db, 'coupons'), where('code', '==', code.toUpperCase().trim()), where('isActive', '==', true));
       const snap = await getDocs(q);
       if (snap.empty) {
-        if (!codeToApply) setCouponError('Cupón no válido o inactivo');
+        const msg = 'Cupón no válido o inactivo';
+        if (!codeToApply) {
+          setCouponError(msg);
+          showAlert("Cupón", msg, 'error');
+        }
         setAppliedCoupon(null);
         return;
       }
@@ -429,21 +437,36 @@ export default function Menu() {
       
       // Check expiry date
       if (coupon.expiryDate && coupon.expiryDate < new Date().toISOString()) {
-        if (!codeToApply) setCouponError('El cupón ha expirado');
+        const msg = 'El cupón ha expirado';
+        if (!codeToApply) {
+          setCouponError(msg);
+          showAlert("Cupón", msg, 'error');
+        }
         setAppliedCoupon(null);
         return;
       }
 
       if (Math.round(cartSubtotal) < coupon.minOrderValue) {
-        if (!codeToApply) setCouponError(`Mínimo de compra: $${coupon.minOrderValue.toLocaleString()}`);
+        const msg = `Mínimo de compra: ${formatPrice(coupon.minOrderValue)}`;
+        if (!codeToApply) {
+          setCouponError(msg);
+          showAlert("Cupón", msg, 'error');
+        }
         setAppliedCoupon(null);
         return;
       }
       setAppliedCoupon(coupon);
       setCouponError('');
+      if (!codeToApply) {
+        showAlert("¡Éxito!", "Cupón aplicado correctamente", 'success');
+      }
     } catch (error) {
       console.error("Error applying coupon", error);
-      if (!codeToApply) setCouponError('Error al validar el cupón');
+      const msg = 'Error al validar el cupón';
+      if (!codeToApply) {
+        setCouponError(msg);
+        showAlert("Error", msg, 'error');
+      }
     }
   };
 
@@ -777,6 +800,21 @@ export default function Menu() {
                          p.description.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch && p.isAvailable;
   });
+
+  const ProductSkeleton = () => (
+    <div className="bg-white rounded-[24px] overflow-hidden shadow-sm border border-stone-100 animate-pulse">
+      <div className="aspect-[4/3] bg-stone-200" />
+      <div className="p-4 space-y-3">
+        <div className="h-4 bg-stone-200 rounded-full w-3/4" />
+        <div className="h-3 bg-stone-100 rounded-full w-full" />
+        <div className="h-3 bg-stone-100 rounded-full w-5/6" />
+        <div className="flex justify-between items-center pt-2">
+          <div className="h-5 bg-stone-200 rounded-full w-20" />
+          <div className="h-8 w-8 bg-stone-200 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
 
   const popularProducts = filteredProducts.filter(p => p.isPopular);
   const dailyOffers = filteredProducts.filter(p => p.isDailyOffer);
@@ -1550,6 +1588,11 @@ export default function Menu() {
                               Aplicar
                             </button>
                           </div>
+                        )}
+                        {couponError && !appliedCoupon && (
+                          <p className="mt-2 text-[10px] font-bold text-red-500 uppercase tracking-wider animate-in fade-in slide-in-from-top-1">
+                            {couponError}
+                          </p>
                         )}
                       </div>
                     )}

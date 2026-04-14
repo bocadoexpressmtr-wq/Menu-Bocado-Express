@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc, limit, where } from 'firebase/firestore';
+import { collection, query, orderBy, doc, getDoc, setDoc, limit, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { LayoutDashboard, Package, ListOrdered, Settings, LogOut, MessageSquare, BarChart3, Gift, Tag } from 'lucide-react';
+import { LayoutDashboard, Package, ListOrdered, Settings, LogOut, MessageSquare, BarChart3, Gift, Tag, RefreshCw } from 'lucide-react';
 import { useDialog } from '../context/DialogContext';
 import { Order, Product, Category, StoreSettings, Review, Customer } from '../types';
 import { auth } from '../firebase';
@@ -25,26 +25,7 @@ export default function Admin() {
   const [user, setUser] = useState(auth.currentUser);
 
   const [isSeeding, setIsSeeding] = useState(false);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      const allowedEmails = ['bocadoexpress.mtr@gmail.com', 'enamoradooluis@gmail.com'];
-      if (u && allowedEmails.includes(u.email || '')) {
-        setIsAuthenticated(true);
-      } else {
-        setIsAuthenticated(false);
-      }
-      setAuthLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Data states
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
@@ -68,9 +49,9 @@ export default function Admin() {
     cloudinaryUploadPreset: 'bocado_menu'
   });
 
-  useEffect(() => {
-    // Fetch settings first to get the PIN
-    const unsubSettings = onSnapshot(doc(db, 'settings', 'store'), (docSnap) => {
+  const fetchSettings = async () => {
+    try {
+      const docSnap = await getDoc(doc(db, 'settings', 'store'));
       if (docSnap.exists()) {
         const data = docSnap.data() as StoreSettings;
         setSettings({
@@ -95,19 +76,17 @@ export default function Admin() {
           cloudinaryUploadPreset: data.cloudinaryUploadPreset ?? 'bocado_menu'
         });
       }
-      setSettingsLoading(false);
-    }, (err) => {
+    } catch (err) {
       console.error("Settings Error:", err);
+    } finally {
       setSettingsLoading(false);
-    });
+    }
+  };
 
-    return () => unsubSettings();
-  }, []);
-
-  useEffect(() => {
+  const fetchPendingOrders = async () => {
     if (!isAuthenticated) return;
-
-    const unsubPendingOrders = onSnapshot(query(collection(db, 'orders'), where('status', '==', 'pending')), (snapshot) => {
+    try {
+      const snapshot = await getDocs(query(collection(db, 'orders'), where('status', '==', 'pending')));
       const newPending = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
       
       setPendingOrders(prev => {
@@ -124,11 +103,25 @@ export default function Admin() {
         }
         return newPending;
       });
-    }, (err) => console.error(err));
+    } catch (err) {
+      console.error("Orders Error:", err);
+    }
+  };
 
-    return () => {
-      unsubPendingOrders();
-    };
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([fetchSettings(), fetchPendingOrders()]);
+    setIsRefreshing(false);
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchPendingOrders();
+    }
   }, [isAuthenticated]);
 
   const handleGoogleLogin = async () => {
@@ -153,6 +146,26 @@ export default function Admin() {
     setIsAuthenticated(false);
     setActiveTab('dashboard');
   };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      const allowedEmails = ['bocadoexpress.mtr@gmail.com', 'enamoradooluis@gmail.com'];
+      if (u && allowedEmails.includes(u.email || '')) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+      }
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   if (authLoading || settingsLoading) return <div className="min-h-screen flex items-center justify-center bg-stone-100">Cargando...</div>;
 
@@ -371,12 +384,22 @@ export default function Admin() {
           </div>
           <h1 className="text-lg font-bold text-stone-900">Bocado Admin</h1>
         </div>
-        <button 
-          onClick={handleLogout}
-          className="p-2 text-stone-500 hover:text-red-600 transition-colors"
-        >
-          <LogOut size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="p-2 text-stone-500 hover:text-stone-900 transition-colors disabled:opacity-50"
+            title="Actualizar datos"
+          >
+            <RefreshCw size={20} className={isRefreshing ? 'animate-spin' : ''} />
+          </button>
+          <button 
+            onClick={handleLogout}
+            className="p-2 text-stone-500 hover:text-red-600 transition-colors"
+          >
+            <LogOut size={20} />
+          </button>
+        </div>
       </header>
 
       {/* Mobile Bottom Navigation */}
@@ -449,6 +472,16 @@ export default function Admin() {
       {/* Main Content */}
       <main className="flex-1 p-4 md:p-8 overflow-y-auto pb-20 md:pb-8">
         <div className="max-w-6xl mx-auto">
+          <div className="hidden md:flex justify-end mb-4">
+            <button 
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-stone-200 rounded-xl text-xs font-bold text-stone-600 hover:bg-stone-50 transition-all disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+              Actualizar Datos
+            </button>
+          </div>
           {isAuthenticated && !user && (
             <div className="mb-6 bg-amber-50 border border-amber-200 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3 text-amber-800">
