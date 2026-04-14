@@ -63,7 +63,9 @@ export default function Admin() {
       { id: '1', platform: 'Instagram', url: 'https://instagram.com/BOCADOEXPRESS.MTR', icon: 'Instagram' },
       { id: '2', platform: 'Facebook', url: 'https://facebook.com/BOCADOEXPRESS.MTR', icon: 'Facebook' },
       { id: '3', platform: 'TikTok', url: 'https://tiktok.com/@BOCADOEXPRESS.MTR', icon: 'Music2' }
-    ]
+    ],
+    cloudinaryCloudName: '',
+    cloudinaryUploadPreset: ''
   });
 
   useEffect(() => {
@@ -88,7 +90,9 @@ export default function Admin() {
             { id: '1', platform: 'Instagram', url: 'https://instagram.com/BOCADOEXPRESS.MTR', icon: 'Instagram' },
             { id: '2', platform: 'Facebook', url: 'https://facebook.com/BOCADOEXPRESS.MTR', icon: 'Facebook' },
             { id: '3', platform: 'TikTok', url: 'https://tiktok.com/@BOCADOEXPRESS.MTR', icon: 'Music2' }
-          ]
+          ],
+          cloudinaryCloudName: data.cloudinaryCloudName ?? '',
+          cloudinaryUploadPreset: data.cloudinaryUploadPreset ?? ''
         });
       }
       setSettingsLoading(false);
