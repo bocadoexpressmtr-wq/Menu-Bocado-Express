@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Store, Shield, Trash2, AlertTriangle, CheckCircle, Loader2, MessageSquare, Share2, Plus, Globe, Instagram, Facebook, Music2, MessageCircle, Youtube, Twitter } from 'lucide-react';
+import { Save, Store, Shield, Trash2, AlertTriangle, CheckCircle, Loader2, MessageSquare, Share2, Plus, Globe, Instagram, Facebook, Music2, MessageCircle, Youtube, Twitter, Image } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { StoreSettings, SocialLink } from '../../types';
@@ -26,7 +26,9 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
         whatsappMessageHeader: editingSettings.whatsappMessageHeader,
         whatsappMessageFooter: editingSettings.whatsappMessageFooter,
         shareText: editingSettings.shareText,
-        socialLinks: editingSettings.socialLinks || []
+        socialLinks: editingSettings.socialLinks || [],
+        cloudinaryCloudName: editingSettings.cloudinaryCloudName || '',
+        cloudinaryUploadPreset: editingSettings.cloudinaryUploadPreset || ''
       }, { merge: true });
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
@@ -384,6 +386,50 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
                 <p className="text-stone-400 text-xs font-medium">No has configurado redes sociales aún.</p>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Cloudinary Settings */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-100">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center text-stone-600">
+              <Image size={20} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-stone-900">Configuración de Imágenes (Cloudinary)</h3>
+              <p className="text-stone-500 text-[10px] font-medium">Optimiza la carga de imágenes de tus productos</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-black text-stone-500 uppercase tracking-widest mb-2">
+                Cloud Name
+              </label>
+              <input 
+                type="text" 
+                value={editingSettings.cloudinaryCloudName || ''}
+                onChange={e => setEditingSettings({...editingSettings, cloudinaryCloudName: e.target.value})}
+                placeholder="Ej: dblc4iq2o"
+                className="w-full px-4 py-3 bg-stone-50 border border-stone-100 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-stone-900 outline-none transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black text-stone-500 uppercase tracking-widest mb-2">
+                Upload Preset (Unsigned)
+              </label>
+              <input 
+                type="text" 
+                value={editingSettings.cloudinaryUploadPreset || ''}
+                onChange={e => setEditingSettings({...editingSettings, cloudinaryUploadPreset: e.target.value})}
+                placeholder="Ej: bocado_menu"
+                className="w-full px-4 py-3 bg-stone-50 border border-stone-100 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-stone-900 outline-none transition-all"
+              />
+              <p className="text-[10px] text-stone-400 mt-2">
+                Asegúrate de que el preset esté configurado como "Unsigned" en tu cuenta de Cloudinary.
+              </p>
+            </div>
           </div>
         </div>
 
