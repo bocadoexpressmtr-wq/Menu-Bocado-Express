@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, collection, orderBy, limit } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteDoc, getDocs, query, collection, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { cn } from '../../lib/utils';
 import { Customer, StoreSettings } from '../../types';
-import { Gift, Users, Search, Plus, Minus, Trash2, ToggleLeft, ToggleRight, Save, Loader2, Trophy, Star, UserPlus, CheckCircle, MessageCircle, Copy } from 'lucide-react';
+import { Gift, Users, Search, Plus, Minus, Trash2, ToggleLeft, ToggleRight, Save, Loader2, Trophy, Star, UserPlus, CheckCircle, MessageCircle, Copy, RefreshCw } from 'lucide-react';
 import { useDialog } from '../../context/DialogContext';
 
 interface LoyaltyTabProps {
@@ -28,15 +28,20 @@ export default function LoyaltyTab({ settings }: LoyaltyTabProps) {
     setLoyaltyMinOrder(settings.loyaltyMinOrder || 0);
   }, [settings]);
 
-  useEffect(() => {
-    const unsub = onSnapshot(query(collection(db, 'customers'), orderBy('createdAt', 'desc'), limit(1000)), (snapshot) => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const snapshot = await getDocs(query(collection(db, 'customers'), orderBy('createdAt', 'desc'), limit(1000)));
       setCustomers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer)));
-      setLoading(false);
-    }, (err) => {
+    } catch (err) {
       console.error("Loyalty Customers Error:", err);
+    } finally {
       setLoading(false);
-    });
-    return () => unsub();
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
   if (loading && customers.length === 0) return <div className="p-8 text-center text-stone-500 font-medium">Cargando datos de lealtad...</div>;
@@ -129,12 +134,21 @@ export default function LoyaltyTab({ settings }: LoyaltyTabProps) {
           <h2 className="text-3xl font-black text-stone-900 tracking-tight">Fidelización</h2>
           <p className="text-stone-500 text-sm">Premia a tus clientes más fieles y atrae nuevos</p>
         </div>
-        {showSuccess && (
-          <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-2xl border border-emerald-100 animate-in fade-in slide-in-from-top-2">
-            <CheckCircle size={16} />
-            <span className="text-xs font-black uppercase tracking-wider">Guardado con éxito</span>
-          </div>
-        )}
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={fetchData}
+            className="flex items-center gap-2 bg-stone-100 text-stone-700 px-4 py-2 rounded-xl hover:bg-stone-200 transition-colors"
+          >
+            <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
+            <span className="text-sm font-medium">Actualizar</span>
+          </button>
+          {showSuccess && (
+            <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-2xl border border-emerald-100 animate-in fade-in slide-in-from-top-2">
+              <CheckCircle size={16} />
+              <span className="text-xs font-black uppercase tracking-wider">Guardado con éxito</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Program Controls */}

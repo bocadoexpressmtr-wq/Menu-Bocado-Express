@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, CheckCircle, Trash2, Clock, ShoppingBag, Trophy, MessageSquare, Bike, Store, Wallet, Archive, CheckSquare, Square, Filter } from 'lucide-react';
-import { updateDoc, doc, getDoc, deleteDoc, collection, query, where, getDocs, addDoc, increment, writeBatch, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import { MapPin, CheckCircle, Trash2, Clock, ShoppingBag, Trophy, MessageSquare, Bike, Store, Wallet, Archive, CheckSquare, Square, Filter, RefreshCw } from 'lucide-react';
+import { updateDoc, doc, getDoc, deleteDoc, collection, query, where, getDocs, addDoc, increment, writeBatch, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Order, StoreSettings } from '../../types';
 import { cn } from '../../lib/utils';
@@ -15,8 +15,10 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
   const [filterDelivery, setFilterDelivery] = useState<string>('all');
   const previousOrderCount = useRef(0);
 
-  useEffect(() => {
-    const unsub = onSnapshot(query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(500)), (snapshot) => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const snapshot = await getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(500)));
       const newOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
       
       const pendingCount = newOrders.filter(o => o.status === 'pending').length;
@@ -27,9 +29,15 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
       previousOrderCount.current = pendingCount;
       
       setOrders(newOrders);
+    } catch (err) {
+      console.error(err);
+    } finally {
       setLoading(false);
-    }, (err) => console.error(err));
-    return () => unsub();
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
   const [showArchived, setShowArchived] = useState(false);
@@ -194,6 +202,13 @@ export default function OrdersTab({ settings }: { settings: StoreSettings }) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <button
+            onClick={fetchData}
+            className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-2 bg-stone-100 text-stone-700 hover:bg-stone-200"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Actualizar
+          </button>
           <button 
             onClick={() => setShowArchived(!showArchived)}
             className={cn(

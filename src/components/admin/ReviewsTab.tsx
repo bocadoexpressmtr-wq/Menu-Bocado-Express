@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, X, Save, Star } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { Plus, Edit2, Trash2, X, Save, Star, RefreshCw } from 'lucide-react';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Review } from '../../types';
 
@@ -12,15 +12,20 @@ export default function ReviewsTab() {
   const [loading, setLoading] = useState(true);
   const [editingReview, setEditingReview] = useState<Partial<Review> | null>(null);
 
-  useEffect(() => {
-    const unsub = onSnapshot(query(collection(db, 'reviews'), orderBy('createdAt', 'desc'), limit(500)), (snapshot) => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const snapshot = await getDocs(query(collection(db, 'reviews'), orderBy('createdAt', 'desc'), limit(500)));
       setReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review)));
-      setLoading(false);
-    }, (err) => {
+    } catch (err) {
       console.error(err);
+    } finally {
       setLoading(false);
-    });
-    return () => unsub();
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
   const [isAdding, setIsAdding] = useState(false);
@@ -90,9 +95,14 @@ export default function ReviewsTab() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-stone-900">Reseñas</h2>
-        <button onClick={() => { setIsAdding(true); setEditingReview({ rating: 5, isVisible: true }); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="bg-stone-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-stone-800 text-sm font-medium shadow-sm">
-          <Plus size={16} /> Nueva Reseña
-        </button>
+        <div className="flex gap-2">
+          <button onClick={fetchData} className="bg-stone-100 text-stone-700 px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-stone-200 text-sm font-medium shadow-sm">
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Actualizar
+          </button>
+          <button onClick={() => { setIsAdding(true); setEditingReview({ rating: 5, isVisible: true }); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="bg-stone-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-stone-800 text-sm font-medium shadow-sm">
+            <Plus size={16} /> Nueva Reseña
+          </button>
+        </div>
       </div>
 
       {(isAdding || editingReview) && (

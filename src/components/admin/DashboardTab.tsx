@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, limit, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, writeBatch, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Order, Product, Customer, StoreSettings } from '../../types';
-import { DollarSign, ShoppingBag, TrendingUp, Package, Users, Receipt, Trophy, Clock, Calendar, Trash2, AlertTriangle, ChevronDown, Loader2 } from 'lucide-react';
+import { DollarSign, ShoppingBag, TrendingUp, Package, Users, Receipt, Trophy, Clock, Calendar, Trash2, AlertTriangle, ChevronDown, Loader2, RefreshCw } from 'lucide-react';
 import { useDialog } from '../../context/DialogContext';
 import { 
   BarChart, 
@@ -26,52 +26,26 @@ export default function DashboardTab({ settings }: { settings: StoreSettings }) 
   const [dateRange, setDateRange] = useState<'today' | 'yesterday' | '7d' | '30d' | 'all'>('7d');
   const [isResetting, setIsResetting] = useState(false);
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [ordersSnap, productsSnap, customersSnap] = await Promise.all([
+        getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(500))),
+        getDocs(query(collection(db, 'products'))),
+        getDocs(query(collection(db, 'customers'), orderBy('createdAt', 'desc'), limit(1000)))
+      ]);
+      setOrders(ordersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)));
+      setProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
+      setCustomers(customersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer)));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let ordersLoaded = false;
-    let productsLoaded = false;
-    let customersLoaded = false;
-
-    const checkLoading = () => {
-      if (ordersLoaded && productsLoaded && customersLoaded) {
-        setLoading(false);
-      }
-    };
-
-    const unsubOrders = onSnapshot(query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(500)), (snapshot) => {
-      setOrders(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)));
-      ordersLoaded = true;
-      checkLoading();
-    }, (err) => {
-      console.error("Dashboard Orders Error:", err);
-      ordersLoaded = true;
-      checkLoading();
-    });
-
-    const unsubProducts = onSnapshot(query(collection(db, 'products')), (snapshot) => {
-      setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
-      productsLoaded = true;
-      checkLoading();
-    }, (err) => {
-      console.error("Dashboard Products Error:", err);
-      productsLoaded = true;
-      checkLoading();
-    });
-
-    const unsubCustomers = onSnapshot(query(collection(db, 'customers'), orderBy('createdAt', 'desc'), limit(1000)), (snapshot) => {
-      setCustomers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer)));
-      customersLoaded = true;
-      checkLoading();
-    }, (err) => {
-      console.error("Dashboard Customers Error:", err);
-      customersLoaded = true;
-      checkLoading();
-    });
-
-    return () => {
-      unsubOrders();
-      unsubProducts();
-      unsubCustomers();
-    };
+    fetchData();
   }, []);
 
   if (loading && orders.length === 0) return <div className="p-8 text-center text-stone-500">Cargando estadísticas...</div>;
@@ -204,6 +178,13 @@ export default function DashboardTab({ settings }: { settings: StoreSettings }) 
           <p className="text-stone-500 text-xs">Resumen del rendimiento de tu negocio</p>
         </div>
         <div className="flex items-center gap-2 w-full md:w-auto">
+          <button
+            onClick={fetchData}
+            className="flex items-center gap-2 bg-stone-100 text-stone-700 px-3 py-2 rounded-lg hover:bg-stone-200 transition-colors shadow-sm"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            <span className="text-xs font-bold">Actualizar</span>
+          </button>
           <div className="relative flex-1 md:flex-none">
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={14} />
             <select 

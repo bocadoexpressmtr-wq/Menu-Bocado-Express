@@ -467,7 +467,7 @@ export default function Admin() {
           )}
           {activeTab === 'dashboard' && <DashboardTab settings={settings} />}
           {activeTab === 'orders' && <OrdersTab settings={settings} />}
-          {activeTab === 'products' && <ProductsTab />}
+          {activeTab === 'products' && <ProductsTab settings={settings} />}
           {activeTab === 'categories' && <CategoriesTab />}
           {activeTab === 'reviews' && <ReviewsTab />}
           {activeTab === 'loyalty' && <LoyaltyTab settings={settings} />}

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, DatabaseZap, X, Save, Upload, Loader2, Package, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { Plus, Edit2, Trash2, DatabaseZap, X, Save, Upload, Loader2, Package, Search, Filter, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../firebase';
 import { cn } from '../../lib/utils';
-import { Product, Category } from '../../types';
+import { Product, Category, StoreSettings } from '../../types';
 
 import { useDialog } from '../../context/DialogContext';
 
-export default function ProductsTab() {
+export default function ProductsTab({ settings }: { settings?: StoreSettings }) {
   const { showAlert, showConfirm } = useDialog();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -18,38 +18,24 @@ export default function ProductsTab() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [productsSnap, categoriesSnap] = await Promise.all([
+        getDocs(query(collection(db, 'products'))),
+        getDocs(query(collection(db, 'categories'), orderBy('order')))
+      ]);
+      setProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
+      setCategories(categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let productsLoaded = false;
-    let categoriesLoaded = false;
-
-    const checkLoading = () => {
-      if (productsLoaded && categoriesLoaded) {
-        setLoading(false);
-      }
-    };
-
-    const unsubProducts = onSnapshot(query(collection(db, 'products')), (snapshot) => {
-      setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
-      productsLoaded = true;
-      checkLoading();
-    }, (err) => {
-      console.error(err);
-      setLoading(false);
-    });
-
-    const unsubCategories = onSnapshot(query(collection(db, 'categories'), orderBy('order')), (snapshot) => {
-      setCategories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
-      categoriesLoaded = true;
-      checkLoading();
-    }, (err) => {
-      console.error(err);
-      setLoading(false);
-    });
-
-    return () => {
-      unsubProducts();
-      unsubCategories();
-    };
+    fetchData();
   }, []);
 
   const [isAdding, setIsAdding] = useState(false);
@@ -84,7 +70,7 @@ export default function ProductsTab() {
     return url;
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -94,9 +80,45 @@ export default function ProductsTab() {
       return;
     }
 
+    // Check if Cloudinary is configured
+    if (settings?.cloudinaryCloudName && settings?.cloudinaryUploadPreset) {
+      setIsUploading(true);
+      setUploadProgress(10);
+      
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', settings.cloudinaryUploadPreset);
+        
+        setUploadProgress(50);
+        
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${settings.cloudinaryCloudName}/image/upload`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!res.ok) {
+          throw new Error('Error al subir a Cloudinary');
+        }
+        
+        const data = await res.json();
+        setEditingProduct(prev => ({ ...prev, imageUrl: data.secure_url }));
+        setUploadProgress(100);
+      } catch (error) {
+        console.error("Cloudinary upload error:", error);
+        showAlert("Error de Subida", "No se pudo subir la imagen a Cloudinary. Verifica la configuración en Ajustes.", 'error');
+      } finally {
+        setTimeout(() => {
+          setIsUploading(false);
+          setUploadProgress(0);
+        }, 500);
+      }
+      return;
+    }
+
     // Validate file size (limit to 800KB for Firestore safety)
     if (file.size > 800 * 1024) {
-      showAlert("Imagen muy pesada", "La imagen es demasiado grande. Por favor selecciona una menor a 800KB.", 'error');
+      showAlert("Imagen muy pesada", "La imagen es demasiado grande. Por favor selecciona una menor a 800KB o configura Cloudinary en Ajustes.", 'error');
       return;
     }
 
@@ -178,12 +200,20 @@ export default function ProductsTab() {
           <h2 className="text-3xl font-black text-stone-900 tracking-tight">Menú de Productos</h2>
           <p className="text-stone-500 text-sm">Gestiona los platos y bebidas de tu restaurante</p>
         </div>
-        <button 
-          onClick={() => { setIsAdding(true); setEditingProduct({ isAvailable: true }); }} 
-          className="w-full md:w-auto bg-stone-900 text-white px-6 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-stone-800 text-sm font-black uppercase tracking-wider shadow-lg shadow-stone-200 transition-all active:scale-95"
-        >
-          <Plus size={18} /> Nuevo Producto
-        </button>
+        <div className="flex gap-2 w-full md:w-auto">
+          <button 
+            onClick={fetchData} 
+            className="w-full md:w-auto bg-stone-100 text-stone-700 px-6 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-stone-200 text-sm font-black uppercase tracking-wider shadow-sm transition-all active:scale-95"
+          >
+            <RefreshCw size={18} className={loading ? "animate-spin" : ""} /> Actualizar
+          </button>
+          <button 
+            onClick={() => { setIsAdding(true); setEditingProduct({ isAvailable: true }); }} 
+            className="w-full md:w-auto bg-stone-900 text-white px-6 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-stone-800 text-sm font-black uppercase tracking-wider shadow-lg shadow-stone-200 transition-all active:scale-95"
+          >
+            <Plus size={18} /> Nuevo Producto
+          </button>
+        </div>
       </div>
 
       {/* Filters Bar */}

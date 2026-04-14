@@ -90,12 +90,14 @@ service cloud.firestore {
     function isValidSettings() {
       // Allow partial updates as long as types are correct if fields are present
       return (!('isStoreOpen' in request.resource.data) || request.resource.data.isStoreOpen is bool) &&
-             (!('loyaltyPrize' in request.resource.data) || validStringLength('loyaltyPrize', 1, 100)) &&
-             (!('loyaltyGoal' in request.resource.data) || (request.resource.data.loyaltyGoal is number && request.resource.data.loyaltyGoal > 0)) &&
-             (!('loyaltyMinOrder' in request.resource.data) || (request.resource.data.loyaltyMinOrder is number && request.resource.data.loyaltyMinOrder >= 0)) &&
+             (!('loyaltyPrize' in request.resource.data) || request.resource.data.loyaltyPrize is string) &&
+             (!('loyaltyGoal' in request.resource.data) || request.resource.data.loyaltyGoal is number) &&
+             (!('loyaltyMinOrder' in request.resource.data) || request.resource.data.loyaltyMinOrder is number) &&
              (!('referralEnabled' in request.resource.data) || request.resource.data.referralEnabled is bool) &&
              (!('loyaltyEnabled' in request.resource.data) || request.resource.data.loyaltyEnabled is bool) &&
-             (!('adminPin' in request.resource.data) || validStringLength('adminPin', 6, 6));
+             (!('adminPin' in request.resource.data) || request.resource.data.adminPin is string) &&
+             (!('cloudinaryCloudName' in request.resource.data) || request.resource.data.cloudinaryCloudName is string) &&
+             (!('cloudinaryUploadPreset' in request.resource.data) || request.resource.data.cloudinaryUploadPreset is string);
     }
 
     function isValidCustomer() {

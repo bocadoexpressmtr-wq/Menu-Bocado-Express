@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, X, Save } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { Plus, Edit2, Trash2, X, Save, RefreshCw } from 'lucide-react';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Category } from '../../types';
 import { useDialog } from '../../context/DialogContext';
@@ -11,15 +11,20 @@ export default function CategoriesTab() {
   const [loading, setLoading] = useState(true);
   const [editingCategory, setEditingCategory] = useState<Partial<Category> | null>(null);
 
-  useEffect(() => {
-    const unsub = onSnapshot(query(collection(db, 'categories'), orderBy('order')), (snapshot) => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const snapshot = await getDocs(query(collection(db, 'categories'), orderBy('order')));
       setCategories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)));
-      setLoading(false);
-    }, (err) => {
+    } catch (err) {
       console.error(err);
+    } finally {
       setLoading(false);
-    });
-    return () => unsub();
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
   const [isAdding, setIsAdding] = useState(false);
@@ -78,9 +83,14 @@ export default function CategoriesTab() {
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-2xl font-bold text-stone-900">Categorías</h2>
-        <button onClick={() => { setIsAdding(true); setEditingCategory({ order: categories.length + 1 }); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="w-full sm:w-auto bg-stone-900 text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-stone-800 text-sm font-medium shadow-sm">
-          <Plus size={16} /> Nueva Categoría
-        </button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <button onClick={fetchData} className="w-full sm:w-auto bg-stone-100 text-stone-700 px-4 py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-stone-200 text-sm font-medium shadow-sm">
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Actualizar
+          </button>
+          <button onClick={() => { setIsAdding(true); setEditingCategory({ order: categories.length + 1 }); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="w-full sm:w-auto bg-stone-900 text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-stone-800 text-sm font-medium shadow-sm">
+            <Plus size={16} /> Nueva Categoría
+          </button>
+        </div>
       </div>
 
       {(isAdding || editingCategory) && (

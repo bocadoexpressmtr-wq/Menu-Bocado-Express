@@ -102,6 +102,7 @@ export default function Menu() {
   const [showInstallButton, setShowInstallButton] = useState(false);
   
   const [quotaError, setQuotaError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-CO', {
@@ -125,26 +126,104 @@ export default function Menu() {
 
     const fetchData = async () => {
       try {
-        // Fetch all data concurrently using Promise.all
-        const [productsSnap, categoriesSnap, reviewsSnap, settingsSnap] = await Promise.all([
-          getDocs(collection(db, 'products')),
-          getDocs(query(collection(db, 'categories'), orderBy('order'))),
-          getDocs(query(collection(db, 'reviews'), orderBy('createdAt', 'desc'), limit(10))),
-          getDoc(doc(db, 'settings', 'store'))
-        ]);
+        const now = Date.now();
+        
+        // Check cache for menu data
+        const cachedMenuData = localStorage.getItem('bocado_menu_data');
+        const cachedMenuTimestamp = localStorage.getItem('bocado_menu_timestamp');
+        let fetchMenu = true;
+        
+        if (cachedMenuData && cachedMenuTimestamp) {
+          const age = now - parseInt(cachedMenuTimestamp, 10);
+          if (age < 30 * 60 * 1000) { // 30 minutes
+            fetchMenu = false;
+            const parsed = JSON.parse(cachedMenuData);
+            setProducts(parsed.products);
+            setCategories(parsed.categories);
+            setReviews(parsed.reviews);
+          }
+        }
 
-        setProducts(productsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
-        setCategories(categoriesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Category)));
-        setReviews(reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Review)).filter(rev => rev.isVisible));
+        // Check cache for settings
+        const cachedSettingsData = localStorage.getItem('bocado_settings');
+        const cachedSettingsTimestamp = localStorage.getItem('bocado_settings_timestamp');
+        let fetchSettings = true;
+        
+        if (cachedSettingsData && cachedSettingsTimestamp) {
+          const age = now - parseInt(cachedSettingsTimestamp, 10);
+          if (age < 30 * 60 * 1000) {
+            // Show cached settings immediately
+            setSettings(JSON.parse(cachedSettingsData));
+            if (age < 2 * 60 * 1000) {
+              fetchSettings = false; // Less than 2 mins, no need to fetch
+            }
+          }
+        }
 
-        if (settingsSnap.exists()) {
-          setSettings(settingsSnap.data() as StoreSettings);
+        const promises: Promise<any>[] = [];
+        let menuPromiseIndex = -1;
+        let settingsPromiseIndex = -1;
+
+        if (fetchMenu) {
+          menuPromiseIndex = promises.length;
+          promises.push(Promise.all([
+            getDocs(collection(db, 'products')),
+            getDocs(query(collection(db, 'categories'), orderBy('order'))),
+            getDocs(query(collection(db, 'reviews'), orderBy('createdAt', 'desc'), limit(10)))
+          ]));
+        }
+
+        if (fetchSettings) {
+          settingsPromiseIndex = promises.length;
+          promises.push(getDoc(doc(db, 'settings', 'store')));
+        }
+
+        if (promises.length > 0) {
+          const results = await Promise.all(promises);
+          
+          if (menuPromiseIndex !== -1) {
+            const [productsSnap, categoriesSnap, reviewsSnap] = results[menuPromiseIndex];
+            const newProducts = productsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as Product));
+            const newCategories = categoriesSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as Category));
+            const newReviews = reviewsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as Review)).filter((rev: any) => rev.isVisible);
+            
+            setProducts(newProducts);
+            setCategories(newCategories);
+            setReviews(newReviews);
+            
+            try {
+              localStorage.setItem('bocado_menu_data', JSON.stringify({
+                products: newProducts,
+                categories: newCategories,
+                reviews: newReviews
+              }));
+              localStorage.setItem('bocado_menu_timestamp', now.toString());
+            } catch (e) {
+              console.warn('Could not cache menu data in localStorage (quota exceeded).');
+            }
+          }
+
+          if (settingsPromiseIndex !== -1) {
+            const settingsSnap = results[settingsPromiseIndex];
+            if (settingsSnap.exists()) {
+              const newSettings = settingsSnap.data() as StoreSettings;
+              setSettings(newSettings);
+              try {
+                localStorage.setItem('bocado_settings', JSON.stringify(newSettings));
+                localStorage.setItem('bocado_settings_timestamp', now.toString());
+              } catch (e) {
+                console.warn('Could not cache settings in localStorage (quota exceeded).');
+              }
+            }
+          }
         }
       } catch (error: any) {
         console.error("Error fetching data:", error);
         if (error?.message?.includes('Quota exceeded') || String(error).includes('Quota exceeded')) {
           setQuotaError(true);
         }
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -954,9 +1033,11 @@ export default function Menu() {
 
       {/* Main Content */}
       <main className="max-w-4xl w-full mx-auto p-4 pt-6 flex-1 pb-32">
-        {categories.length === 0 && products.length === 0 ? (
-          <div className="text-center py-20 text-stone-500">
-            <p>Cargando el menú...</p>
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <SkeletonCard key={i} />
+            ))}
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-20 text-stone-500">
@@ -1906,8 +1987,34 @@ function ProductCard({ product, addToCart, isStoreOpen }: { product: Product, ad
           <span className="font-bold text-[#1A1A1A]">
             {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(product.price)}
           </span>
+          <button 
+            disabled={!isStoreOpen || (product.isAvailable === false)}
+            className={cn(
+              "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
+              added ? "bg-emerald-500 text-white" : "bg-stone-900 text-white hover:bg-stone-800",
+              (!isStoreOpen || (product.isAvailable === false)) && "bg-stone-300 text-stone-500"
+            )}
+          >
+            {added ? <CheckCircle2 size={16} /> : <Plus size={16} />}
+          </button>
         </div>
       </div>
     </div>
   );
 }
+
+const SkeletonCard = () => (
+  <div className="bg-white rounded-3xl p-4 shadow-sm border border-stone-100 flex gap-4 relative overflow-hidden animate-pulse">
+    <div className="w-28 h-28 shrink-0 rounded-2xl bg-stone-200"></div>
+    <div className="flex-1 flex flex-col justify-between py-1">
+      <div>
+        <div className="h-5 bg-stone-200 rounded-md w-3/4 mb-2"></div>
+        <div className="h-3 bg-stone-200 rounded-md w-full mb-1"></div>
+        <div className="h-3 bg-stone-200 rounded-md w-5/6"></div>
+      </div>
+      <div className="flex items-center justify-between mt-2">
+        <div className="h-5 bg-stone-200 rounded-md w-1/3"></div>
+      </div>
+    </div>
+  </div>
+);

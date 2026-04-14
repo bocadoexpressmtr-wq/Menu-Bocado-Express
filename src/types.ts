@@ -75,6 +75,8 @@ export interface StoreSettings {
   whatsappMessageFooter?: string;
   shareText?: string;
   socialLinks?: SocialLink[];
+  cloudinaryCloudName?: string;
+  cloudinaryUploadPreset?: string;
 }
 
 export interface Coupon {

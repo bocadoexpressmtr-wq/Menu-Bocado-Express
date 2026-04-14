@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Feedback } from '../../types';
-import { Trash2, MessageSquare, CheckCircle, Clock, Phone, User, Inbox, AlertCircle } from 'lucide-react';
+import { Trash2, MessageSquare, CheckCircle, Clock, Phone, User, Inbox, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useDialog } from '../../context/DialogContext';
 
@@ -11,17 +11,25 @@ export default function FeedbackTab() {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const q = query(collection(db, 'feedback'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const q = query(collection(db, 'feedback'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Feedback[];
       setFeedbacks(data);
+    } catch (error) {
+      console.error("Error fetching feedback", error);
+    } finally {
       setLoading(false);
-    });
-    return () => unsubscribe();
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
   const handleDelete = async (id: string) => {
@@ -60,9 +68,18 @@ export default function FeedbackTab() {
 
   return (
     <div className="space-y-6 pb-20">
-      <div>
-        <h2 className="text-3xl font-black text-stone-900 tracking-tight">Sugerencias y Quejas</h2>
-        <p className="text-stone-500 text-sm">Escucha lo que tus clientes tienen que decir</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-black text-stone-900 tracking-tight">Sugerencias y Quejas</h2>
+          <p className="text-stone-500 text-sm">Escucha lo que tus clientes tienen que decir</p>
+        </div>
+        <button
+          onClick={fetchData}
+          className="flex items-center gap-2 bg-stone-100 text-stone-700 px-4 py-2 rounded-xl hover:bg-stone-200 transition-colors"
+        >
+          <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
+          <span className="hidden sm:inline">Actualizar</span>
+        </button>
       </div>
 
       {feedbacks.length === 0 ? (

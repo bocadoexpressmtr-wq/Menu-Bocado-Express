@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Coupon } from '../../types';
-import { Plus, Edit2, Trash2, X, Check, Tag, Save } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Check, Tag, Save, RefreshCw } from 'lucide-react';
 import { useDialog } from '../../context/DialogContext';
 
 export default function CouponsTab() {
   const { showAlert, showConfirm } = useDialog();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Coupon>({
@@ -19,15 +20,22 @@ export default function CouponsTab() {
     expiryDate: ''
   });
 
-  useEffect(() => {
-    const q = query(collection(db, 'coupons'), orderBy('code'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const q = query(collection(db, 'coupons'), orderBy('code'));
+      const snapshot = await getDocs(q);
       const newCoupons = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Coupon));
       setCoupons(newCoupons);
-    }, (err) => {
+    } catch (err) {
       console.error("Coupons Error:", err);
-    });
-    return () => unsubscribe();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -102,15 +110,24 @@ export default function CouponsTab() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-stone-800">Cupones de Descuento</h2>
-        {!isAdding && (
+        <div className="flex gap-2">
           <button
-            onClick={() => { resetForm(); setIsAdding(true); }}
-            className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-xl hover:bg-stone-800 transition-colors"
+            onClick={fetchData}
+            className="flex items-center gap-2 bg-stone-100 text-stone-700 px-4 py-2 rounded-xl hover:bg-stone-200 transition-colors"
           >
-            <Plus size={20} />
-            <span className="hidden sm:inline">Nuevo Cupón</span>
+            <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Actualizar</span>
           </button>
-        )}
+          {!isAdding && (
+            <button
+              onClick={() => { resetForm(); setIsAdding(true); }}
+              className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-xl hover:bg-stone-800 transition-colors"
+            >
+              <Plus size={20} />
+              <span className="hidden sm:inline">Nuevo Cupón</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {isAdding && (

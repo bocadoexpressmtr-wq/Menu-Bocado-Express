@@ -270,6 +270,43 @@ export default function SettingsTab({ settings }: { settings: StoreSettings }) {
           </div>
         </div>
 
+        {/* Cloudinary Settings Card */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 group">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 group-hover:bg-stone-900 group-hover:text-white transition-all duration-300">
+              <Globe size={20} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-stone-900">Configuración de Imágenes (Cloudinary)</h3>
+              <p className="text-stone-400 text-[10px] font-medium">Necesario para subir imágenes de productos sin saturar la base de datos</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Cloud Name</label>
+              <input 
+                type="text" 
+                value={editingSettings.cloudinaryCloudName || ''} 
+                onChange={e => setEditingSettings({...editingSettings, cloudinaryCloudName: e.target.value})} 
+                className="w-full px-4 py-2 bg-stone-50 border border-stone-100 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-xs" 
+                placeholder="ej: dxyz123"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em] ml-1">Upload Preset (Unsigned)</label>
+              <input 
+                type="text" 
+                value={editingSettings.cloudinaryUploadPreset || ''} 
+                onChange={e => setEditingSettings({...editingSettings, cloudinaryUploadPreset: e.target.value})} 
+                className="w-full px-4 py-2 bg-stone-50 border border-stone-100 rounded-lg focus:ring-2 focus:ring-stone-900 outline-none transition-all font-medium text-xs" 
+                placeholder="ej: bocado_preset"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Social Links Card */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 group">
           <div className="flex items-center justify-between mb-6">
